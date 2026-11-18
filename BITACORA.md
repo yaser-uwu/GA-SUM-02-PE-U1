@@ -8,3 +8,9 @@ Una entrada por sesión de trabajo, con este formato:
 - **Realizado:**
 - **Problemas encontrados:**
 - **Solución:**
+
+
+## 2026-11-17 — Carlos Manotoa
+- **Realizado:** Revisión de los requisitos experimentales y definición del plan de ejecución
+- **Problemas encontrados:** Falta revisar y confirmar la secuencia de ejecución del plan
+- **Solución:** Se registraron como pendientes de revisión y confirmación
