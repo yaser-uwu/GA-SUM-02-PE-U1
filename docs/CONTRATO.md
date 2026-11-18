@@ -53,3 +53,56 @@ Se genera por script al momento de la corrida (no se escribe a mano).
 - Sockets: `src/sockets/server.py`, `src/sockets/client.py`. gRPC: `src/grpc/server_grpc.py`, `src/grpc/client_grpc.py`.
 - Análisis: `analysis/analisis.py`. Figuras: `docs/figures/` (boxplot a 300 DPI).
 - Documento: `docs/guia1_practica.tex`, `docs/referencias.bib`, `docs/guia1_practica.pdf`.
+
+
+/// Parte Carlos (Preliminar) ///
+
+## Plan de ejecución experimental
+
+### Matriz de pruebas
+
+Para comparar TCP y gRPC se utilizarán las mismas
+condiciones experimentales.
+
+| Parámetro | Configuración |
+|---|---|
+| Mecanismos | Sockets TCP y gRPC |
+| Nodos | A, B y C |
+| Tamaños | 100 y 10240 bytes |
+| Calentamiento | 1 corrida por combinación |
+| Corridas válidas | 5 por combinación |
+| Envíos por corrida | 100 |
+| Intercambios Lamport | 20 por mecanismo |
+| Concurrencia | 3 clientes simultáneos |
+
+Para las pruebas secuenciales se necesitan 24 corridas:
+12 de TCP y 12 de gRPC, incluyendo el calentamiento.
+
+Esto representa 2400 envíos de medición y calentamiento.
+Las pruebas concurrentes se ejecutarán por separado.
+
+### Orden de ejecución
+
+1. Preparar el entorno y comprobar las dependencias.
+2. Registrar las características de la máquina.
+3. Ejecutar los 20 intercambios con TCP y gRPC.
+4. Realizar las corridas de calentamiento.
+5. Ejecutar las cinco corridas válidas por combinación.
+6. Repetir las pruebas con tres clientes simultáneos.
+7. Verificar los CSV generados por ambos mecanismos.
+8. Generar las huellas SHA-256 de los datos originales.
+
+### Condiciones de comparación
+
+- Ejecutar ambos mecanismos en la misma máquina.
+- Utilizar los mismos tamaños y cantidades de mensajes.
+- No incluir el calentamiento en las estadísticas.
+- Registrar las mediciones sin modificar los CSV originales.
+- Identificar el mecanismo, la corrida y el escenario.
+- Usar la duración real para calcular el rendimiento.
+
+### Pendientes de coordinación
+
+- Confirmar la secuencia de 20 mensajes con FORM-TL-01.
+- Acordar los comandos de ejecución con los implementadores.
+- Comprobar que TCP y gRPC generan los CSV del contrato.
