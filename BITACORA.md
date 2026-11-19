@@ -78,3 +78,12 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Realizado:** Se incorporaron al contrato la secuencia de 20 intercambios, las carpetas por ejecución e intento y los encabezados de eventos, latencia y duración.
 - **Problemas encontrados:** Al reiniciar los relojes se pueden repetir los identificadores. Una corrida reintentada también puede dejar varios CSV para la misma medición.
 - **Solución:** Cada ejecución e intento conserva sus propios archivos. El coordinador reúne las muestras concurrentes y Eduardo usa un solo intento completo por corrida.
+
+
+## 2026-11-18 — Eduardo David Reinoso Vélez
+- **Presentes:** Eduardo Reinoso.
+- **Realizado:** Lector de CSV (`analysis/analisis.py`) que valida columnas y rutas contra el contrato y toma el intento completo de menor número por corrida. Cálculo de media, mediana, desviación estándar, p95 y mensajes por segundo por mecanismo, modo y tamaño, sin el calentamiento.
+- **Problemas encontrados:** Todavía no hay CSV reales de TCP ni de gRPC. El contrato nombra `analisis.py` y el plan del equipo `analizar.py`.
+- **Solución:** Se probó con datos de prueba locales, que no se suben al repositorio, y se contrastó una combinación con un cálculo independiente en numpy. Se mantiene `analisis.py`, el nombre del contrato.
+- **Uso de inteligencia artificial:** indiqué a Claude (Sonnet 5.5) qué debía hacer cada script según las tareas del plan y Claude generó el código. Se probó con datos de prueba locales y con un cálculo independiente en numpy. El código pasó por mi revisión.
+- **Commit del lector:** https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/e26d2441f28a39a7db63cd3142639fa8c134c358
