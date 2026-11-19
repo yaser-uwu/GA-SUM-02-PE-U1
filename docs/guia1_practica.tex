@@ -1,0 +1,65 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{csquotes}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+\usepackage[backend=biber,style=ieee]{biblatex}
+\addbibresource{referencias.bib}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  {\large Universidad Técnica Estatal de Quevedo\par}
+  {\large Facultad de Ciencias de la Computación\par}
+  {\large Carrera de Software\par}
+  \vspace{0.5cm}
+  {\large Aplicaciones Distribuidas (ISR-701) \,--\, 7mo nivel, paralelo A\par}
+  \vspace{2cm}
+  {\LARGE\bfseries Práctica experimental de la Unidad 1:\\
+  comunicación entre procesos distribuidos\\con sockets TCP y gRPC\par}
+  \vspace{1.5cm}
+  {\large Código de la actividad: GA-SUM-02 / PE-U1\par}
+  \vspace{1.5cm}
+  {\large\bfseries Grupo GLMR\par}
+  \vspace{0.4cm}
+  \begin{tabular}{c}
+    García Bazurto Kevin Leonel \\
+    Lombeida Escaleras Bryan Humberto \\
+    Manotoa Álava Carlos Alexander \\
+    Reinoso Vélez Eduardo David
+  \end{tabular}
+  \vspace{1.5cm}
+
+  {\large Docente: Ing. Gleiston Guerrero Ulloa, PhD\par}
+  \vspace{0.4cm}
+  {\large Noviembre de 2026\par}
+  \vspace{1.5cm}
+  {\large Repositorio:\par}
+  {\small\url{https://github.com/yaser-uwu/GA-SUM-02-PE-U1}\par}
+\end{titlepage}
+
+\section{Objetivo}
+
+Implementar y comparar dos mecanismos de comunicación entre procesos, sockets TCP y
+gRPC con Protocol Buffers, en un sistema de tres nodos que corre en \texttt{localhost}.
+Se mide la latencia de ida y vuelta y el rendimiento con 100 envíos por corrida, y se
+comprueba con relojes lógicos de Lamport el orden de los eventos entre los nodos.
+
+\section{Hipótesis}
+
+Se espera que los sockets TCP tengan menor latencia que gRPC. En gRPC cada mensaje pasa
+por trabajo adicional: se codifica en binario con Protocol Buffers y viaja sobre una capa
+más de protocolo, HTTP/2. En TCP solo se envía el JSON.
+
+Esta hipótesis se escribió el 18 de noviembre de 2026, antes de ejecutar las mediciones
+oficiales.
+
+\end{document}
