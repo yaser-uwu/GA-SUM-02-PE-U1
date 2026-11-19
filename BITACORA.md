@@ -87,3 +87,23 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Solución:** Se probó con datos de prueba locales, que no se suben al repositorio, y se contrastó una combinación con un cálculo independiente en numpy. Se mantiene `analisis.py`, el nombre del contrato.
 - **Uso de inteligencia artificial:** indiqué a Claude (Sonnet 5.5) qué debía hacer cada script según las tareas del plan y Claude generó el código. Se probó con datos de prueba locales y con un cálculo independiente en numpy. El código pasó por mi revisión.
 - **Commit del lector:** https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/e26d2441f28a39a7db63cd3142639fa8c134c358
+
+
+## 2026-11-18 — Bryan Humberto Lombeida Escaleras
+- **Presentes:** Bryan Lombeida(sesión individual).
+- **Realizado:**
+  - Definí `proto/mensajes.proto` con `service Mensajeria`, `rpc EnviarMensaje(Mensaje) returns (Acuse)`, `Mensaje{sender, timestamp, message}` y `Acuse{ok, error}`, siguiendo la estructura del mensaje documentada en el README y los campos del contrato del equipo.
+  - Generé `src/grpc/mensajes_pb2.py` y `src/grpc/mensajes_pb2_grpc.py` con `grpcio-tools` desde la raíz del repositorio.
+  - Implementé `src/grpc/servidor_grpc.py` (escucha en `127.0.0.1:5000`, imprime emisor, reloj y mensaje, y devuelve `Acuse(ok=True)`) y `src/grpc/cliente_grpc.py` (envía `sender="nodo-A"`, `timestamp=1`, `message="Hola desde nodo-A"`, con timeout de 10 s y manejo de `grpc.RpcError`).
+  - Verifiqué la llamada en dos terminales: el cliente recibió el acuse `ok=True` y el servidor mostró los tres campos del mensaje.
+  - Tomé tres capturas en mi máquina (ambas terminales, servidor y cliente) y las guardé en `screenshots/`.
+- **Problemas encontrados:**
+  - El entorno no tenía `grpcio` ni `grpcio-tools`; el Python del sistema era 3.14 y no incluía esos paquetes.
+  - El material de la actividad indicaba `mensajes.proto`, mientras que el contrato del equipo mencionaba `messaging.proto`.
+  - El código generado puede fallar al importarse si los scripts se ejecutan como módulo (`python -m ...`).
+- **Solución:**
+  - Creé un entorno virtual con Python 3.12 e instalé `grpcio 1.85.3`, `grpcio-tools 1.85.3` y `protobuf 7.36.2`. El `.venv` está en `.gitignore` y no se versiona.
+  - Mantuve `mensajes.proto`; queda pendiente coordinar con Carlos la actualización de `docs/CONTRATO.md` y `readme.md`.
+  - Ejecuté los scripts directamente desde la raíz: `python src/grpc/servidor_grpc.py` y `python src/grpc/cliente_grpc.py`.
+- **Uso de inteligencia artificial:**
+  Utilicé el agente OpenCode (modelo DeepSeek V4.1 Flash Free) para preparar el `.proto`, el servidor y el cliente. Revisé y ejecuté el código en dos terminales antes de subirlo.
