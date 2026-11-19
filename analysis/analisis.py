@@ -1,6 +1,7 @@
 """Lector del experimento PE-U1 (sockets TCP y gRPC).
 
-Lee y agrupa los CSV de una sesión y comprueba que cumplan docs/CONTRATO.md.
+Lee y agrupa los CSV de una sesión, comprueba que cumplan docs/CONTRATO.md y
+calcula la latencia y el rendimiento por mecanismo, modo y tamaño.
 
 Uso, desde la raíz del repositorio:
     python analysis/analisis.py data/<sesion>
@@ -98,6 +99,29 @@ def revisar_protocolo(usados):
     return avisos
 
 
+def calcular_metricas(lat_usada, usados):
+    """Latencia (ms) y rendimiento (mensajes/s) por mecanismo, modo y tamaño.
+
+    Excluye el calentamiento. La latencia junta todas las muestras de las corridas
+    válidas; el rendimiento se calcula por corrida como envios_ok / duracion_s.
+    La desviación estándar es la muestral (n - 1) y el p95 interpola linealmente.
+    """
+    grupo = ["mecanismo", "modo", "tamano"]
+
+    datos = lat_usada[~lat_usada["calentamiento"]].copy()
+    datos["rtt_ms"] = datos["rtt_s"] * 1000
+    latencia = datos.groupby(grupo)["rtt_ms"].agg(
+        muestras="count", media_ms="mean", mediana_ms="median", desv_ms="std",
+        p95_ms=lambda s: s.quantile(0.95)).reset_index()
+
+    validas = usados[~usados["calentamiento"]].copy()
+    validas["msg_por_s"] = validas["envios_ok"] / validas["duracion_s"]
+    rendimiento = validas.groupby(grupo)["msg_por_s"].agg(
+        corridas="count", msg_s_media="mean", msg_s_desv="std").reset_index()
+
+    return latencia.merge(rendimiento, on=grupo)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Lee y valida los CSV de una sesión.")
     parser.add_argument("sesion", help="carpeta data/<sesion>")
@@ -111,6 +135,9 @@ def main():
           f"| corridas completas usadas: {len(usados)}")
     resumen = usados.sort_values(CLAVE)[CLAVE + ["intento", "filas", "duracion_s"]]
     print(resumen.to_string(index=False))
+
+    print()
+    print(calcular_metricas(lat_usada, usados).round(3).to_string(index=False))
 
     avisos = revisar_protocolo(usados)
     for aviso in avisos:
