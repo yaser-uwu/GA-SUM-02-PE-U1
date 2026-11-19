@@ -72,3 +72,9 @@ y en base a eso ya realizar la práctica y explicar su funcionamiento, se usó t
 ### Enlace al commit de código
 
 Pendiente de añadir el enlace del primer avance TCP.
+
+## 2026-11-18 — Carlos Manotoa
+- **Presentes:** Carlos (registro del acuerdo del equipo)
+- **Realizado:** Se incorporaron al contrato la secuencia de 20 intercambios, las carpetas por ejecución e intento y los encabezados de eventos, latencia y duración.
+- **Problemas encontrados:** Al reiniciar los relojes se pueden repetir los identificadores. Una corrida reintentada también puede dejar varios CSV para la misma medición.
+- **Solución:** Cada ejecución e intento conserva sus propios archivos. El coordinador reúne las muestras concurrentes y Eduardo usa un solo intento completo por corrida.
