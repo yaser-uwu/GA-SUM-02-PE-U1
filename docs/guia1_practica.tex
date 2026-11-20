@@ -12,6 +12,7 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta}
 \lstset{basicstyle=\ttfamily\small, columns=fullflexible, frame=single, breaklines=true}
+\lstset{literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1 {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1 {Ñ}{{\~N}}1}
 \usepackage[hidelinks]{hyperref}
 \usepackage[backend=biber,style=ieee]{biblatex}
 \addbibresource{referencias.bib}
@@ -205,6 +206,46 @@ y su desviación estándar entre corridas. Si una corrida se repite, se usa el i
 completo de menor número y se excluyen los intentos fallidos y el calentamiento. Las
 barras de los gráficos muestran la media y un intervalo de $\pm 1$ desviación estándar.
 Las figuras y las tablas salen de \texttt{analysis/analisis.py}.
+
+\section{Verificación del reloj de Lamport}
+
+\paragraph{Método.} Cada nodo registra un evento por envío y por recepción en un CSV con
+el reloj, la hora real, la contraparte y el identificador del mensaje (\texttt{emisor:reloj
+de envío}). El verificador \texttt{analysis/verificar\_lamport.py} empareja cada envío con
+su recepción y comprueba que ambos nodos coincidan y que el reloj de la recepción sea
+estrictamente mayor que el del envío. La tabla~\ref{tab:lamport} se genera con
+\texttt{analysis/tabla\_lamport.py} a partir de los mismos CSV.
+
+\paragraph{Resultado.} Se usaron una ejecución de sockets TCP (sesión
+\texttt{20261119-222709-kevin}) y una de gRPC (sesión \texttt{20261119-220530-bryan}), cada
+una con 20 intercambios entre los tres nodos. Ninguna tiene violaciones: las 20
+recepciones de cada mecanismo tienen un reloj mayor que su envío. Los relojes finales
+coinciden entre mecanismos (37, 39 y 40), porque el patrón de mensajes es el mismo.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Verificación de Lamport en una ejecución de cada mecanismo.}
+  \label{tab:lamport}
+  \input{tablas/lamport_resumen.tex}
+\end{table}
+
+\paragraph{Eventos concurrentes con el mismo reloj.} En la sesión
+\texttt{20261120-151615-carlos} (solo sockets TCP) nodo-A y nodo-B envían a nodo-C sin
+haberse comunicado antes (tabla~\ref{tab:empate}). Ambos envíos tienen reloj 1, aunque son
+eventos distintos y ninguno causó al otro. Nodo-C los recibe con los relojes 2 y 3, y el
+verificador acepta los dos pares. Con solo el reloj no se puede saber si los envíos
+ocurrieron a la vez o uno después del otro: el reloj de Lamport asigna 1 a ambos, y el
+orden 2 y 3 en nodo-C solo refleja cuál mensaje llegó primero. Las cuatro filas también
+tienen la misma \texttt{hora\_real} al milisegundo, así que la hora real tampoco los
+separa. Esto concreta la limitación indicada en el marco conceptual: $C(a) = C(b)$ no
+implica relación causal.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Empate de relojes en nodo-A y nodo-B.}
+  \label{tab:empate}
+  \input{tablas/empate.tex}
+\end{table}
 
 \printbibliography
 
