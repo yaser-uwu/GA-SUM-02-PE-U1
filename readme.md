@@ -126,198 +126,52 @@ python src/grpc/coordinador_lamport.py
 En ese caso genera automáticamente un identificador de sesión y ejecuta la
 misma secuencia de 20 intercambios.
 
-## Ejecución del primer avance con sockets TCP
+## Ejecución de los tres nodos con sockets TCP y reloj de Lamport
 
 Responsable: Kevin Leonel García Bazurto.
 
-### Objetivo
+### Funcionamiento
 
-Demostrar el envío de un mensaje JSON desde un cliente hacia un servidor
-mediante una conexión TCP y recibir un acuse de recepción.
+Los nodos A, B y C se ejecutan como procesos independientes en `127.0.0.1`, en los puertos `5000`, `5001` y `5002`. Cada nodo mantiene su propio reloj de Lamport: incrementa antes de enviar y aplica `max(reloj_local, timestamp_recibido) + 1` al recibir. El acuse queda fuera del reloj lógico, según el contrato.
 
-### Archivos
+- `src/sockets/server.py`: envío, recepción, validación JSON y reloj de cada nodo.
+- `src/sockets/client.py`: coordinación de los procesos, secuencia de 20 rutas y registro CSV.
 
-- `src/sockets/servidor.py`: recibe el mensaje, comprueba que contiene los
-  campos obligatorios, muestra su contenido y devuelve el acuse.
-- `src/sockets/cliente.py`: establece la conexión, envía el mensaje y muestra
-  la respuesta recibida.
+### Ejecución
 
-### Requisitos para este avance
+Python 3.11 o superior y los puertos `5000`, `5001` y `5002` disponibles. TCP y gRPC se ejecutan por separado porque utilizan los mismos puertos.
 
-- Python 3.11 o superior.
-- Puerto TCP 5000 disponible.
-- Ambos programas ejecutándose en la misma computadora.
-
-Este avance utiliza los módulos `socket` y `json`, incluidos en Python.
-Para ejecutar únicamente este intercambio no es necesario instalar paquetes
-adicionales. Las dependencias generales de la práctica se encuentran en
-`requirements.txt`.
-
-### Preparación
-
-Abre dos terminales en la raíz del repositorio, es decir, la carpeta que
-contiene `src/`, `docs/` y `requirements.txt`.
-
-Comprueba la versión de Python:
+Comando desde la raíz del repositorio:
 
 ```bash
-python --version
+python src/sockets/client.py
 ```
 
-Si Windows reconoce el comando `py`, puedes utilizarlo en lugar de `python`
-en los pasos siguientes.
+El coordinador inicia los tres nodos, realiza los 20 intercambios del contrato, guarda los eventos, ejecuta el verificador y cierra los procesos.
 
-### Paso 1. Iniciar el servidor
+### Registro y verificación
 
-En la primera terminal ejecuta:
+Cada sesión guarda sus eventos en `data/<sesion>/sockets/eventos/lamport-01/eventos.csv`. Las columnas son `nodo,tipo_evento,reloj,hora_real,contraparte,msg_id`. Envío y recepción se emparejan por `msg_id`.
+
+Verificación del CSV de la prueba realizada:
 
 ```bash
-python src/sockets/servidor.py
+python analysis/verificar_lamport.py data/20261119-222709-kevin/sockets/eventos/lamport-01/eventos.csv 20
 ```
 
-Debe aparecer:
+Resultado obtenido: **40 eventos, 20 mensajes identificados, 20 pares válidos y 0 errores**.
 
-```text
-Servidor TCP escuchando en 127.0.0.1:5000
-```
+### Documentación y evidencia
 
-Mantén esta terminal abierta mientras ejecutas el cliente.
+- [Guía TCP con Lamport](docs/AVANCE-TCP-LAMPORT.md).
+- [CSV de los 20 intercambios](data/20261119-222709-kevin/sockets/eventos/lamport-01/eventos.csv).
+- [Captura de la verificación con usuario, equipo, fecha y hora](screenshots/tcp-lamport-20-intercambios-kevin.jpeg).
+- [Contrato del equipo](docs/CONTRATO.md).
 
-### Paso 2. Ejecutar el cliente
+Las solicitudes y los acuses usan JSON UTF-8 delimitado por un salto de línea. Se validan los campos del mensaje y se limita la espera de conexión y lectura. Un fallo detiene la secuencia y conserva los eventos registrados.
 
-En la segunda terminal ejecuta:
+### Uso de inteligencia artificial
 
-```bash
-python src/sockets/cliente.py
-```
-
-El cliente envía este mensaje:
-
-```json
-{
-  "sender": "nodo-A",
-  "timestamp": 1,
-  "message": "Hola desde nodo-A"
-}
-```
-
-La salida esperada incluye:
-
-```text
-Mensaje enviado: {'sender': 'nodo-A', 'timestamp': 1, 'message': 'Hola desde nodo-A'}
-Acuse recibido: {'ok': True}
-```
-
-### Paso 3. Revisar el servidor
-
-En la primera terminal deben aparecer los campos recibidos:
-
-```text
-Emisor: nodo-A
-Reloj de Lamport recibido: 1
-Mensaje: Hola desde nodo-A
-```
-
-También aparece la dirección del cliente. El puerto temporal del cliente
-puede variar entre ejecuciones.
-
-Puedes volver a ejecutar el cliente para repetir el intercambio.
-Para detener el servidor, pulsa Ctrl+C en su terminal.
-
-### Formato de comunicación
-
-El cliente y el servidor intercambian texto JSON codificado en UTF-8.
-
-Cada mensaje termina con un salto de línea (`\n`). El receptor utiliza
-`readline()` para leer hasta ese delimitador, porque TCP puede entregar
-un mensaje en varios fragmentos.
-
-El servidor comprueba que el JSON sea un objeto y contenga los campos
-`sender`, `timestamp` y `message`.
-
-Cuando acepta el mensaje, devuelve:
-
-```json
-{"ok": true}
-```
-
-Si recibe un JSON inválido o faltan campos obligatorios, intenta devolver:
-
-```json
-{"ok": false, "error": "Mensaje JSON inválido"}
-```
-
-El cliente espera hasta 10 segundos para las operaciones de conexión
-y lectura. El servidor también limita a 10 segundos la espera de datos
-en cada conexión aceptada.
-
-### Alcance actual
-
-- El servidor escucha en `127.0.0.1:5000`.
-- El cliente se identifica como `nodo-A` dentro del mensaje.
-- Cada ejecución del cliente envía un mensaje y recibe un acuse.
-- El servidor permanece disponible para nuevas conexiones y las atiende
-  una a la vez.
-- `timestamp` tiene el valor fijo `1` como dato de prueba.
-
-### Próximos avances
-
-- Integrar la configuración compartida de `src/common/config.py`.
-- Ejecutar nodo-A, nodo-B y nodo-C con sus propios relojes de Lamport.
-- Incrementar el reloj antes de enviar y actualizarlo al recibir.
-- Registrar los 20 intercambios y sus eventos en CSV.
-- Medir la latencia y realizar las repeticiones, tamaños de mensaje
-  y pruebas concurrentes del protocolo experimental.
-
-Los formatos finales de nodos, mensajes y CSV están documentados en
-`docs/CONTRATO.md`.
-
-### Solución de problemas
-
-| Problema | Qué revisar |
-|---|---|
-| Python no se reconoce | Prueba `py --version` y usa `py` en los comandos. |
-| No se encuentra el archivo | Comprueba que la terminal está en la raíz del repositorio. |
-| Conexión rechazada | Inicia primero el servidor y confirma que ambos archivos usan el mismo host y puerto. |
-| Puerto 5000 ocupado | Detén la ejecución anterior del servidor o el proceso que esté utilizando ese puerto. |
-| Tiempo de espera agotado | Comprueba que el otro programa sigue en ejecución y que el mensaje termina con `\n`. |
-
-### Uso de inteligencia artificial en este avance
-
-Se utilizó ChatGPT Codex para preparar el código inicial y ya con eso yo hacer la práctica y explicar
-el intercambio TCP, el formato JSON y la delimitación de mensajes.
+Se utilizó ChatGPT Sol 6.1 mediante Codex como apoyo para preparar el código y mejorar parte de la documentación y revisar el contrato. Yo ejecuté el programa en mi equipo y comprobé el resultado del verificador.
 
 
-## Ejecución del análisis
-TODO: comando del script de `analysis/` y archivos que genera.
-
-## Verificación de la integridad de los datos
-
-Antes de medir, registra la ficha en la máquina oficial. Usa el mismo usuario
-que figura en el identificador de la sesión y el modo de ejecución acordado.
-
-```bash
-python analysis/registrar_maquina.py carlos procesos
-```
-
-Al terminar las corridas oficiales, genera el manifiesto desde la raíz del repositorio:
-
-```bash
-python analysis/generar_sha256.py
-python analysis/generar_sha256.py --verificar
-```
-
-El manifiesto incluye los CSV de `data/` y se crea una sola vez. Si ya existe,
-el generador avisa y conserva las huellas guardadas. La opción `--verificar`
-avisa si cambió un CSV, si falta un archivo o si apareció un CSV sin huella.
-Las huellas también se pueden comprobar con `sha256sum -c data/SHA256SUMS`.
-
-## Compilación del documento
-- Compilador: pdflatex + biber
-- Archivo principal: `docs/guia1_practica.tex`
-- Orden de comandos (desde `docs/`):
-  1. `pdflatex guia1_practica.tex`
-  2. `biber guia1_practica`
-  3. `pdflatex guia1_practica.tex`
-  4. `pdflatex guia1_practica.tex`
-- Dependencias LaTeX: TODO (listar paquetes finales, p. ej. amsmath, booktabs, listings, graphicx, tikz, biblatex, hyperref)
