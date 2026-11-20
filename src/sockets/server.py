@@ -1,56 +1,143 @@
+import argparse
 import json
 import socket
+import sys
+import threading
+from datetime import datetime
+from pathlib import Path
 
-HOST = "127.0.0.1"
-PORT = 5000
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.config import HOST, NODOS
+
+LIMITE = 65536
+SALIDA = threading.Lock()
 
 
-def atender_cliente(conexion):
-    # El salto de línea delimita el mensaje dentro del flujo TCP.
-    with conexion.makefile("rb") as entrada:
-        linea = entrada.readline()
-        if not linea:
-            return
+def informar(tipo, **datos):
+    with SALIDA:
+        print(json.dumps({"tipo": tipo, **datos}), flush=True)
 
+
+def leer_json(entrada):
+    linea = entrada.readline(LIMITE + 1)
+    if not linea or len(linea) > LIMITE or not linea.endswith(b"\n"):
+        raise ValueError("Mensaje incompleto o demasiado largo")
+    return json.loads(linea.decode("utf-8"))
+
+
+class Nodo:
+    def __init__(self, nombre, host, puertos):
+        self.nombre = nombre
+        self.host = host
+        self.puertos = puertos
+        self.reloj = 0
+        self.lock = threading.Lock()
+
+    def evento(self, tipo, contraparte, msg_id):
+        informar("evento", datos={
+            "nodo": self.nombre,
+            "tipo_evento": tipo,
+            "reloj": self.reloj,
+            "hora_real": datetime.now().isoformat(timespec="milliseconds"),
+            "contraparte": contraparte,
+            "msg_id": msg_id,
+        })
+
+    def recibir(self, conexion):
         try:
-            mensaje = json.loads(linea.decode("utf-8"))
-            campos = ("sender", "timestamp", "message")
-            if not isinstance(mensaje, dict) or not all(
-                campo in mensaje for campo in campos
-            ):
-                raise ValueError("Faltan campos obligatorios")
-
-            print(f"Emisor: {mensaje['sender']}")
-            print(f"Reloj de Lamport recibido: {mensaje['timestamp']}")
-            print(f"Mensaje: {mensaje['message']}", flush=True)
+            with conexion.makefile("rb") as entrada:
+                mensaje = leer_json(entrada)
+            if not isinstance(mensaje, dict) or set(mensaje) != {"sender", "timestamp", "message"}:
+                raise ValueError("Se requieren sender, timestamp y message")
+            origen = mensaje["sender"]
+            reloj = mensaje["timestamp"]
+            if not isinstance(origen, str) or origen not in self.puertos or origen == self.nombre:
+                raise ValueError("Emisor inválido")
+            if type(reloj) is not int or reloj < 1 or not isinstance(mensaje["message"], str):
+                raise ValueError("timestamp debe ser entero positivo y message debe ser texto")
+            with self.lock:
+                self.reloj = max(self.reloj, reloj) + 1
+                self.evento("recepcion", origen, f"{origen}:{reloj}")
             respuesta = {"ok": True}
-        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
-            print(f"Mensaje rechazado: {error}", flush=True)
-            respuesta = {"ok": False, "error": "Mensaje JSON inválido"}
-
+        except (ValueError, UnicodeError) as error:
+            respuesta = {"ok": False, "error": str(error)}
         conexion.sendall(json.dumps(respuesta).encode("utf-8") + b"\n")
+
+    def enviar(self, destino, texto):
+        if not isinstance(destino, str) or destino not in self.puertos or destino == self.nombre or not isinstance(texto, str):
+            raise ValueError("Destino o texto inválido")
+        with socket.create_connection((self.host, self.puertos[destino]), timeout=5) as conexion:
+            with self.lock:
+                timestamp = self.reloj + 1
+                mensaje = {"sender": self.nombre, "timestamp": timestamp, "message": texto}
+                contenido = json.dumps(mensaje, ensure_ascii=False).encode("utf-8") + b"\n"
+                if len(contenido) > LIMITE:
+                    raise ValueError("Mensaje demasiado largo")
+                self.reloj = timestamp
+                self.evento("envio", destino, f"{self.nombre}:{timestamp}")
+                conexion.sendall(contenido)
+            with conexion.makefile("rb") as entrada:
+                respuesta = leer_json(entrada)
+            if not isinstance(respuesta, dict) or respuesta.get("ok") is not True:
+                raise ValueError(f"Acuse rechazado: {respuesta}")
+        informar("acuse", msg_id=f"{self.nombre}:{timestamp}", destino=destino, ok=True)
+
+
+def servir(servidor, nodo, detener):
+    while not detener.is_set():
+        try:
+            conexion, _ = servidor.accept()
+        except socket.timeout:
+            continue
+        except OSError:
+            return
+        with conexion:
+            conexion.settimeout(5)
+            try:
+                nodo.recibir(conexion)
+            except (OSError, ValueError) as error:
+                informar("error", detalle=str(error))
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Nodo TCP con un reloj compartido por envío y recepción")
+    parser.add_argument("--nodo", choices=NODOS, required=True)
+    parser.add_argument("--host", default=HOST)
+    parser.add_argument("--puerto-base", type=int, default=min(NODOS.values()))
+    args = parser.parse_args()
+    if not 1 <= args.puerto_base <= 65533:
+        parser.error("Puerto base fuera de rango")
+    puertos = {nombre: args.puerto_base + i for i, nombre in enumerate(NODOS)}
+    nodo = Nodo(args.nodo, args.host, puertos)
+    detener = threading.Event()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
         servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        servidor.bind((HOST, PORT))
+        servidor.bind((args.host, puertos[args.nodo]))
         servidor.listen()
-        print(f"Servidor TCP escuchando en {HOST}:{PORT}", flush=True)
-
+        servidor.settimeout(0.2)
+        receptor = threading.Thread(target=servir, args=(servidor, nodo, detener))
+        receptor.start()
+        informar("listo", nodo=args.nodo, host=args.host, puerto=puertos[args.nodo], reloj=0)
         try:
-            while True:
-                conexion, direccion = servidor.accept()
-                conexion.settimeout(10)
-                print(f"\nCliente conectado: {direccion}", flush=True)
-                with conexion:
-                    try:
-                        atender_cliente(conexion)
-                    except OSError as error:
-                        print(f"Error de conexión: {error}", flush=True)
-        except KeyboardInterrupt:
-            print("\nServidor detenido.")
+            for linea in sys.stdin:
+                try:
+                    orden = json.loads(linea)
+                    if orden.get("accion") == "cerrar":
+                        break
+                    if orden.get("accion") != "enviar":
+                        raise ValueError("Acción desconocida")
+                    nodo.enviar(orden["destino"], orden["message"])
+                except (OSError, ValueError, KeyError, TypeError) as error:
+                    informar("error", detalle=str(error))
+        finally:
+            detener.set()
+            receptor.join(timeout=6)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        raise SystemExit(main())
+    except OSError as error:
+        informar("error", detalle=str(error))
+        raise SystemExit(1)
