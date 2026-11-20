@@ -199,3 +199,18 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Problemas encontrados:** Los 20 intercambios acordados se ejecutan en secuencia. Para demostrar el empate hacía falta una ejecución en la que los emisores fueran independientes. En esta copia aún faltan la medición de latencia TCP y la prueba concurrente de latencia.
 - **Solución:** Se usó `analysis/comprobar_empate_tcp.py --sesion <sesion>` con dos envíos independientes al nodo C. La prueba de empate quedó separada de las mediciones de latencia.
 - **Pendiente de coordinación:** Confirmar la máquina y la sesión comunes, completar el piloto TCP y los dos modos concurrentes, y generar las huellas cuando estén todos los CSV oficiales.
+
+
+## 2026-11-20 — Eduardo David Reinoso Vélez
+- **Presentes:** Eduardo Reinoso.
+- **Realizado:**
+  - Agregué `analysis/tabla_lamport.py`, que lee los CSV de eventos de TCP y gRPC y el del empate de relojes, y genera `docs/tablas/lamport_resumen.tex` y `docs/tablas/empate.tex`.
+  - Escribí en `docs/guia1_practica.tex` la sección de verificación del reloj de Lamport, con los CSV de Kevin (TCP), Bryan (gRPC) y Carlos (empate). Las dos ejecuciones tienen 40 eventos, 20 pares y 0 violaciones; en el empate, nodo-A y nodo-B envían a nodo-C con reloj 1.
+  - Agregué las secciones de implementación y discusión cualitativa (desarrollo, tipado y manejo de errores) con las amenazas a la validez.
+- **Problemas encontrados:**
+  - `listings` no aceptaba los acentos del `.proto` al incluirlo en el informe.
+  - En el repositorio faltan las mediciones de latencia de TCP y las corridas oficiales de gRPC, por lo que todavía no se pueden escribir los resultados ni las conclusiones con cifras.
+- **Solución:**
+  - Configuré `listings` para que acepte los acentos y comprobé que el informe compila desde un clon limpio.
+  - Los resultados quedan pendientes hasta que estén los CSV de latencia.
+- **Uso de inteligencia artificial:** usé Claude (Sonnet 3.5) como herramienta de apoyo. Estructuré las secciones faltantes y diseñé la lógica del script de Lamport, usando la IA para pulir la redacción y generar la base del código. Luego revisé a fondo el texto y validé manualmente los resultados de las tablas contra los CSV.
