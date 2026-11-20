@@ -157,3 +157,17 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Aviso para Carlos Manotoa y el equipo:**
   - El CSV real de gRPC ya está disponible en `data/20261119-220530-bryan/grpc/eventos/lamport-01/eventos.csv`. Contiene los 20 intercambios Lamport (40 eventos) y pasó la verificación. Cualquiera que necesite este CSV para el análisis, las huellas SHA-256 o la comparación con TCP puede usarlo.
 >>>>>>> 6b94022 (Implementación del sistema de nodos gRPC con reloj de Lamport)
+
+## 2026-11-19 — Kevin Leonel García Bazurto
+
+- **Presentes:** Kevin Leonel García Bazurto.
+- **Realizado:**
+  - Renombré los archivos TCP a `client.py` y `server.py`, de acuerdo con el contrato.
+  - Amplié el programa a tres nodos con relojes de Lamport independientes y ejecuté las 20 rutas acordadas, esperando el acuse antes de continuar con cada ruta.
+  - Registré los envíos y recepciones en `data/20261119-222709-kevin/sockets/eventos/lamport-01/eventos.csv`.
+  - Ejecuté el verificador: 40 eventos, 20 mensajes identificados, 20 pares válidos y 0 errores.
+  - Subí la captura `screenshots/tcp-lamport-20-intercambios-kevin.jpeg`, que muestra la verificación, el usuario, el equipo, la fecha y la hora.
+  - Incorporé `docs/AVANCE-TCP-LAMPORT.md` y actualicé mi sección TCP del README con los comandos y los enlaces a la evidencia.
+- **Problemas encontrados:** Los nombres anteriores `cliente.py` y `servidor.py` no coincidían con el contrato.
+- **Solución:** Renombré ambos archivos y actualicé las instrucciones con los nombres actuales.
+- **Uso de inteligencia artificial:** Utilicé ChatGPT Sol 6.1 mediante Codex como apoyo para preparar parte del código y la documentación y como ayuda para revisar el contrato. Ejecuté el programa en mi equipo y comprobé el resultado del verificador.
