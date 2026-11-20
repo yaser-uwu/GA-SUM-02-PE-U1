@@ -114,3 +114,21 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Solución:** Los comandos quedaron en el README. La ficha y el manifiesto oficiales se generarán con el equipo y los datos de la medición.
 - **Pendiente de coordinación:** Confirmar la máquina para registrar su ficha y fijar las versiones exactas de las cinco dependencias. Cuando esté el cambio de Yaser, actualizar las instrucciones TCP. Cuando ambos mecanismos exporten los CSV, probar una ejecución Lamport de 20 pares y una corrida de latencia por mecanismo con Eduardo. Después, ejecutar las corridas oficiales, comprobar el empate de relojes, generar y verificar `data/SHA256SUMS` y tomar la captura del nodo C.
 - **Verificación de integridad:** Se añadió `--verificar` al script SHA-256 para poder comprobar las huellas con Python. Las pruebas locales confirmaron que detecta cambios, archivos faltantes y CSV nuevos sin huella. Los archivos de prueba se usaron en una carpeta temporal.
+
+
+## 2026-11-19 — Eduardo David Reinoso Vélez
+- **Presentes:** Eduardo Reinoso.
+- **Realizado:**
+  - Agregué a `analysis/analisis.py` el diagrama de cajas de las latencias (300 DPI), las barras de latencia y de rendimiento con media ± 1 desviación estándar, y las tablas LaTeX `latencia.tex` y `rendimiento.tex`. Las figuras van a `docs/figures/` y las tablas a `docs/tablas/`.
+  - Armé `docs/referencias.bib` con seis referencias IEEE: cuatro artículos con DOI, el RFC 9293 y Lamport (1978). Abrí cada DOI y comprobé título, autores, volumen, páginas y fecha.
+  - Escribí en `docs/guia1_practica.tex` el marco conceptual, la arquitectura (diagrama de los tres nodos y contenido de `proto/mensajes.proto`) y el protocolo experimental. La carátula, el objetivo y la hipótesis son del 18 de noviembre; la hipótesis, que los sockets TCP tendrán menor latencia que gRPC, se escribió antes de medir.
+- **Problemas encontrados:**
+  - Una referencia, un libro, no tenía DOI y su ISBN solo se pudo comprobar en librerías.
+  - El informe lee el `.proto` con la ruta `../proto/mensajes.proto`, así que solo compila desde `docs/`.
+  - El diagrama de nodos sale del contrato y falta contrastarlo con el de FORM-TL-01.
+- **Solución:**
+  - Reemplacé el libro por un artículo con DOI verificado.
+  - Se compila desde `docs/`, como indican las instrucciones del README.
+  - Queda pendiente comparar el diagrama con el de FORM-TL-01.
+- **Uso de inteligencia artificial:** usé Claude (Sonnet 5.5) como asistente. Yo definí qué debía calcular y graficar el script, escogí la hipótesis y decidí reemplazar la referencia sin DOI. A partir de esas instrucciones, Claude escribió el código del script, reescribió el texto de las secciones y buscó las referencias. Yo comprobé los DOI en el navegador y revisé el código y el texto.
+- **Commits:** https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/128534d y https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/8cbc828
