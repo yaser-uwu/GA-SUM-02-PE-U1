@@ -107,3 +107,10 @@ Pendiente de añadir el enlace del primer avance TCP.
   - Ejecuté los scripts directamente desde la raíz: `python src/grpc/servidor_grpc.py` y `python src/grpc/cliente_grpc.py`.
 - **Uso de inteligencia artificial:**
   Utilicé el agente OpenCode (modelo DeepSeek V4.1 Flash Free) para preparar el `.proto`, el servidor y el cliente. Revisé y ejecuté el código en dos terminales antes de subirlo.
+
+## 2026-11-19 — Carlos Manotoa
+- **Realizado:** Se prepararon los scripts para registrar la máquina y generar las huellas SHA-256. En una prueba temporal en Linux (sistema operativo donde estoy trabajando), la ficha incluyó los cinco datos requeridos y las huellas detectaron el cambio en un CSV.
+- **Problemas encontrados:** Falta confirmar la máquina oficial. En esta copia aún no están los CSV de una ejecución real de TCP y gRPC. Yaser confirmó que cambiará los nombres de los archivos TCP a `server.py` y `client.py`.
+- **Solución:** Los comandos quedaron en el README. La ficha y el manifiesto oficiales se generarán con el equipo y los datos de la medición.
+- **Pendiente de coordinación:** Confirmar la máquina para registrar su ficha y fijar las versiones exactas de las cinco dependencias. Cuando esté el cambio de Yaser, actualizar las instrucciones TCP. Cuando ambos mecanismos exporten los CSV, probar una ejecución Lamport de 20 pares y una corrida de latencia por mecanismo con Eduardo. Después, ejecutar las corridas oficiales, comprobar el empate de relojes, generar y verificar `data/SHA256SUMS` y tomar la captura del nodo C.
+- **Verificación de integridad:** Se añadió `--verificar` al script SHA-256 para poder comprobar las huellas con Python. Las pruebas locales confirmaron que detecta cambios, archivos faltantes y CSV nuevos sin huella. Los archivos de prueba se usaron en una carpeta temporal.

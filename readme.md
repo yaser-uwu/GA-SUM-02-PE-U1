@@ -196,7 +196,25 @@ el intercambio TCP, el formato JSON y la delimitación de mensajes.
 TODO: comando del script de `analysis/` y archivos que genera.
 
 ## Verificación de la integridad de los datos
-TODO: `sha256sum -c data/SHA256SUMS` (o equivalente en Windows).
+
+Antes de medir, registra la ficha en la máquina oficial. Usa el mismo usuario
+que figura en el identificador de la sesión y el modo de ejecución acordado.
+
+```bash
+python analysis/registrar_maquina.py carlos procesos
+```
+
+Al terminar las corridas oficiales, genera el manifiesto desde la raíz del repositorio:
+
+```bash
+python analysis/generar_sha256.py
+python analysis/generar_sha256.py --verificar
+```
+
+El manifiesto incluye los CSV de `data/` y se crea una sola vez. Si ya existe,
+el generador avisa y conserva las huellas guardadas. La opción `--verificar`
+avisa si cambió un CSV, si falta un archivo o si apareció un CSV sin huella.
+Las huellas también se pueden comprobar con `sha256sum -c data/SHA256SUMS`.
 
 ## Compilación del documento
 - Compilador: pdflatex + biber
