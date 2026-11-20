@@ -1,6 +1,21 @@
-# GA-SUM-02 / PE-U1 — Comunicación entre procesos distribuidos: sockets TCP y gRPC
+<div align="center">
 
-Aplicaciones Distribuidas (ISR-701) · UTEQ · 7mo nivel A · Grupo GLMR
+# GA-SUM-02 / PE-U1
+
+**Práctica experimental: comunicación entre procesos con sockets TCP y gRPC**
+
+![UTEQ](https://img.shields.io/badge/UTEQ-Ingenier%C3%ADa%20de%20Software-1f6feb?style=flat-square)
+![Asignatura](https://img.shields.io/badge/Aplicaciones%20Distribuidas-ISR--701-8957e5?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)
+![gRPC](https://img.shields.io/badge/gRPC-Protocol%20Buffers-244c5a?style=flat-square)
+![Sockets](https://img.shields.io/badge/Sockets-TCP-0072B2?style=flat-square)
+![Lamport](https://img.shields.io/badge/Relojes-Lamport-E69F00?style=flat-square)
+
+</div>
+
+---
+
+Séptimo nivel, paralelo A · SPA 2026-2027 · Actividad grupal del grupo GLMR, que compara sockets TCP y gRPC con mediciones propias y comprueba el orden de eventos con relojes de Lamport.
 
 Integrantes:
 - Kevin Leonel García Bazurto
@@ -26,8 +41,7 @@ BITACORA.md     bitácora del equipo
 Formatos de datos y nombres de archivo: ver `docs/CONTRATO.md`.
 
 ## Requisitos
-- Python 3.11 o superior
-- `pip install -r requirements.txt` (terminal cmd.exe, dentro de la raíz del repo)
+- Python 3.11 o superior y `pip install -r requirements.txt`, desde la raíz del repo (terminal cmd.exe)
 
 ## Ejecución de los tres nodos con gRPC y reloj de Lamport
 
@@ -219,3 +233,39 @@ Las solicitudes y los acuses usan JSON UTF-8 delimitado por un salto de línea. 
 Se utilizó ChatGPT Sol 6.1 mediante Codex como apoyo para preparar el código y mejorar parte de la documentación y revisar el contrato. Yo ejecuté el programa en mi equipo y comprobé el resultado del verificador.
 
 
+
+## Informe y análisis
+
+Responsable: Eduardo David Reinoso Vélez.
+
+### Compilar el informe
+
+- Compilador: `pdflatex` con `biber` para la bibliografía IEEE (biblatex). En Windows se usó MiKTeX.
+- Archivo principal: `docs/guia1_practica.tex`. El PDF resultante queda en `docs/guia1_practica.pdf`.
+- Paquetes: `babel` (español), `biblatex`, `csquotes`, `graphicx`, `booktabs`, `amsmath`, `listings`, `tikz` e `hyperref`.
+- Se compila desde la carpeta `docs/`, porque el informe incluye `../proto/mensajes.proto` con una ruta relativa.
+
+Comandos, en este orden, desde la carpeta `docs/`:
+
+```bash
+pdflatex guia1_practica.tex
+biber guia1_practica
+pdflatex guia1_practica.tex
+pdflatex guia1_practica.tex
+```
+
+### Generar tablas y figuras
+
+Las tablas y gráficos del informe salen de los CSV, no se escriben a mano. Desde la raíz del repositorio, con `requirements.txt` instalado:
+
+```bash
+python analysis/analisis.py <sesion>
+```
+
+Lee `data/<sesion>/`, calcula media, mediana, desviación estándar, p95 y mensajes por segundo por mecanismo, modo y tamaño (sin el calentamiento), y escribe las figuras en `docs/figures/` y las tablas en `docs/tablas/`.
+
+Las tablas de la verificación de Lamport se generan con los CSV de eventos de TCP y gRPC y el del empate:
+
+```bash
+python analysis/tabla_lamport.py --tcp <eventos.csv> --grpc <eventos.csv> --empate <eventos.csv>
+```

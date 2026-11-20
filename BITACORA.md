@@ -213,4 +213,4 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Solución:**
   - Configuré `listings` para que acepte los acentos y comprobé que el informe compila desde un clon limpio.
   - Los resultados quedan pendientes hasta que estén los CSV de latencia.
-- **Uso de inteligencia artificial:** usé Claude (Sonnet 3.5) como herramienta de apoyo. Estructuré las secciones faltantes y diseñé la lógica del script de Lamport, usando la IA para pulir la redacción y generar la base del código. Luego revisé a fondo el texto y validé manualmente los resultados de las tablas contra los CSV.
+- **Uso de inteligencia artificial:** usé Claude (Sonnet 5.5) como herramienta de apoyo. Estructuré las secciones faltantes y diseñé la lógica del script de Lamport, usando la IA para pulir la redacción y generar la base del código. Luego revisé a fondo el texto y validé manualmente los resultados de las tablas contra los CSV.
