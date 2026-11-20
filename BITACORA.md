@@ -116,6 +116,7 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Verificación de integridad:** Se añadió `--verificar` al script SHA-256 para poder comprobar las huellas con Python. Las pruebas locales confirmaron que detecta cambios, archivos faltantes y CSV nuevos sin huella. Los archivos de prueba se usaron en una carpeta temporal.
 
 
+<<<<<<< HEAD
 ## 2026-11-19 — Eduardo David Reinoso Vélez
 - **Presentes:** Eduardo Reinoso.
 - **Realizado:**
@@ -132,3 +133,27 @@ Pendiente de añadir el enlace del primer avance TCP.
   - Queda pendiente comparar el diagrama con el de FORM-TL-01.
 - **Uso de inteligencia artificial:** usé Claude (Sonnet 5.5) como asistente. Yo definí qué debía calcular y graficar el script, escogí la hipótesis y decidí reemplazar la referencia sin DOI. A partir de esas instrucciones, Claude escribió el código del script, reescribió el texto de las secciones y buscó las referencias. Yo comprobé los DOI en el navegador y revisé el código y el texto.
 - **Commits:** https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/128534d y https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/8cbc828
+=======
+## 2026-11-19 — Bryan Humberto Lombeida Escaleras
+- **Presentes:** Bryan Lombeida (sesión individual).
+- **Realizado:**
+  - Amplié `proto/mensajes.proto` con el servicio `Control` (`Reiniciar` y `OrdenarEnvio`) para que el coordinador pudiera ordenar los envíos sin mezclar esa comunicación con el mensaje de datos. El servicio `Mensajeria` y el mensaje `Mensaje{sender, timestamp, message}` se mantuvieron iguales.
+  - Agregué `RUTAS_LAMPORT` en `src/common/config.py` con la secuencia del contrato: `A->B, B->C, C->A, A->C, C->B, B->A` tres veces y `A->B, B->C` al final, para un total de 20 rutas.
+  - Implementé `src/grpc/nodo.py`: cada nodo abre su servidor gRPC en `127.0.0.1:5000`, `5001` o `5002`, mantiene su propio reloj de Lamport (incrementa antes de enviar y aplica `max(local, recibido) + 1` al recibir) y escribe sus eventos en un CSV por nodo.
+  - Implementé `src/grpc/coordinador_lamport.py`: en modo automático lanza los tres nodos, espera a que estén listos, reinicia los relojes, ordena las 20 rutas, une los CSV por nodo en `eventos.csv`, ejecuta `analysis/verificar_lamport.py` y detiene los procesos. En modo `--manual` se conecta a nodos que ya están en marcha.
+  - Regeneré `src/grpc/mensajes_pb2.py` y `src/grpc/mensajes_pb2_grpc.py` desde el `.proto` actualizado.
+  - Comprobé que `src/grpc/servidor_grpc.py` y `src/grpc/cliente_grpc.py`, usados en la primera llamada, siguen funcionando con el `.proto` ampliado.
+  - Ejecuté primero una prueba automática y después la corrida oficial en modo manual con la sesión `20261119-220530-bryan`. El coordinador completó los 20 pasos y generó `data/20261119-220530-bryan/grpc/eventos/lamport-01/eventos.csv` con 40 eventos: 20 envíos y 20 recepciones.
+  - El verificador reportó 40 filas, 20 mensajes identificados, 20 pares válidos, 0 errores y `VERIFICACIÓN CORRECTA`.
+  - Se agregaron cuatro capturas en `screenshots/`: los tres nodos en marcha y el coordinador con los 20 pasos y el resumen de verificación.
+  - Documenté en `readme.md` los comandos para iniciar los tres nodos, ejecutar el coordinador en modo manual y automático, ubicar el CSV y verificarlo.
+- **Problemas encontrados:**
+  - El contrato del equipo todavía menciona `proto/messaging.proto` y los nombres `server_grpc.py`/`client_grpc.py`, mientras que el repositorio usa `proto/mensajes.proto` y los scripts nuevos `nodo.py`/`coordinador_lamport.py`.
+- **Solución:**
+  - Mantuve `mensajes.proto` para no romper la implementación ya probada y documenté los comandos nuevos en `readme.md`.
+  - Queda pendiente coordinar con Carlos la actualización de `docs/CONTRATO.md` para que los nombres coincidan.
+- **Uso de inteligencia artificial:**
+  - Utilicé el agente OpenCode (modelo DeepSeek V4.1 Flash Free) para implementar los nodos, el coordinador y la integración del CSV. Revisé el código y ejecuté las pruebas antes de dejar este avance.
+- **Aviso para Carlos Manotoa y el equipo:**
+  - El CSV real de gRPC ya está disponible en `data/20261119-220530-bryan/grpc/eventos/lamport-01/eventos.csv`. Contiene los 20 intercambios Lamport (40 eventos) y pasó la verificación. Cualquiera que necesite este CSV para el análisis, las huellas SHA-256 o la comparación con TCP puede usarlo.
+>>>>>>> 6b94022 (Implementación del sistema de nodos gRPC con reloj de Lamport)

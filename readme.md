@@ -29,7 +29,103 @@ Formatos de datos y nombres de archivo: ver `docs/CONTRATO.md`.
 - Python 3.11 o superior
 - `pip install -r requirements.txt` (terminal cmd.exe, dentro de la raíz del repo)
 
-## Ejecución de los nodos
+## Ejecución de los tres nodos con gRPC y reloj de Lamport
+
+Responsable: Bryan Humberto Lombeida Escaleras.
+
+Cada nodo mantiene su propio reloj de Lamport y escribe sus eventos en un CSV.
+El coordinador ordena los 20 intercambios del contrato y reúne los archivos.
+
+### Requisitos
+
+- Haber instalado `requirements.txt` en el entorno que se usará.
+- Ejecutar los comandos desde la raíz del repositorio.
+- Los puertos `5000`, `5001` y `5002` deben estar libres.
+
+### 1. Elegir el identificador de sesión
+
+El identificador debe tener el formato `AAAAMMDD-HHMMSS-usuario`. Por ejemplo:
+
+```bash
+date '+%Y%m%d-%H%M%S'
+```
+
+Si devuelve `20261119-220530`, la sesión será `20261119-220530-bryan`.
+Usa el mismo identificador en las cuatro terminales.
+
+### 2. Iniciar los tres nodos
+
+En tres terminales separadas, desde la raíz y con el entorno activado:
+
+```bash
+python src/grpc/nodo.py nodo-A --sesion 20261119-220530-bryan
+```
+
+```bash
+python src/grpc/nodo.py nodo-B --sesion 20261119-220530-bryan
+```
+
+```bash
+python src/grpc/nodo.py nodo-C --sesion 20261119-220530-bryan
+```
+
+Cada terminal debe mostrar su puerto:
+
+```text
+[nodo-A] escuchando en 127.0.0.1:5000 ...
+[nodo-B] escuchando en 127.0.0.1:5001 ...
+[nodo-C] escuchando en 127.0.0.1:5002 ...
+```
+
+### 3. Ejecutar el coordinador
+
+En una cuarta terminal, desde la raíz:
+
+```bash
+python src/grpc/coordinador_lamport.py --manual --sesion 20261119-220530-bryan
+```
+
+El coordinador se conecta a los nodos que ya están en marcha, reinicia sus
+relojes y ordena las 20 rutas del contrato. Al finalizar debe mostrar:
+
+```text
+Paso 20/20: nodo-B -> nodo-C OK
+...
+Pares válidos: 20
+Errores: 0
+Resultado: VERIFICACIÓN CORRECTA
+```
+
+El resultado queda en:
+
+```text
+data/<sesion>/grpc/eventos/lamport-01/eventos.csv
+```
+
+También se conservan los CSV individuales `nodo-A.csv`, `nodo-B.csv` y
+`nodo-C.csv` en la misma carpeta.
+
+### 4. Verificar el CSV
+
+```bash
+python analysis/verificar_lamport.py data/20261119-220530-bryan/grpc/eventos/lamport-01/eventos.csv 20
+```
+
+La verificación debe reportar 40 filas, 20 mensajes, 20 pares válidos y
+0 errores. Para detener los nodos, pulsa `Ctrl+C` en cada una de las tres
+terminales.
+
+### Modo automático
+
+El coordinador también puede lanzar y detener los tres nodos por sí solo:
+
+```bash
+python src/grpc/coordinador_lamport.py
+```
+
+En ese caso genera automáticamente un identificador de sesión y ejecuta la
+misma secuencia de 20 intercambios.
+
 ## Ejecución del primer avance con sockets TCP
 
 Responsable: Kevin Leonel García Bazurto.

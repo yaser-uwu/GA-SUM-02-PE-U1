@@ -95,3 +95,124 @@ class Mensajeria:
             timeout,
             metadata,
             _registered_method=True)
+
+
+class ControlStub:
+    """Servicio auxiliar para que el coordinador ordene los envíos.
+    No forma parte del mensaje de datos ni del reloj de Lamport.
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.Reiniciar = channel.unary_unary(
+                '/Control/Reiniciar',
+                request_serializer=mensajes__pb2.Vacio.SerializeToString,
+                response_deserializer=mensajes__pb2.Acuse.FromString,
+                _registered_method=True)
+        self.OrdenarEnvio = channel.unary_unary(
+                '/Control/OrdenarEnvio',
+                request_serializer=mensajes__pb2.Orden.SerializeToString,
+                response_deserializer=mensajes__pb2.Acuse.FromString,
+                _registered_method=True)
+
+
+class ControlServicer:
+    """Servicio auxiliar para que el coordinador ordene los envíos.
+    No forma parte del mensaje de datos ni del reloj de Lamport.
+    """
+
+    def Reiniciar(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def OrdenarEnvio(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_ControlServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'Reiniciar': grpc.unary_unary_rpc_method_handler(
+                    servicer.Reiniciar,
+                    request_deserializer=mensajes__pb2.Vacio.FromString,
+                    response_serializer=mensajes__pb2.Acuse.SerializeToString,
+            ),
+            'OrdenarEnvio': grpc.unary_unary_rpc_method_handler(
+                    servicer.OrdenarEnvio,
+                    request_deserializer=mensajes__pb2.Orden.FromString,
+                    response_serializer=mensajes__pb2.Acuse.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'Control', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('Control', rpc_method_handlers)
+
+
+ # This class is part of an EXPERIMENTAL API.
+class Control:
+    """Servicio auxiliar para que el coordinador ordene los envíos.
+    No forma parte del mensaje de datos ni del reloj de Lamport.
+    """
+
+    @staticmethod
+    def Reiniciar(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Control/Reiniciar',
+            mensajes__pb2.Vacio.SerializeToString,
+            mensajes__pb2.Acuse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def OrdenarEnvio(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Control/OrdenarEnvio',
+            mensajes__pb2.Orden.SerializeToString,
+            mensajes__pb2.Acuse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)

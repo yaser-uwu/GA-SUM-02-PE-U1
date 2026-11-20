@@ -4,6 +4,13 @@ service Mensajeria {
   rpc EnviarMensaje(Mensaje) returns (Acuse);
 }
 
+// Servicio auxiliar para que el coordinador ordene los envíos.
+// No forma parte del mensaje de datos ni del reloj de Lamport.
+service Control {
+  rpc Reiniciar(Vacio) returns (Acuse);
+  rpc OrdenarEnvio(Orden) returns (Acuse);
+}
+
 message Mensaje {
   string sender = 1;
   int64 timestamp = 2;
@@ -13,4 +20,10 @@ message Mensaje {
 message Acuse {
   bool ok = 1;
   string error = 2;
+}
+
+message Vacio {}
+
+message Orden {
+  string destino = 1;
 }

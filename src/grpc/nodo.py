@@ -1,0 +1,207 @@
+"""Nodo gRPC con su propio reloj de Lamport.
+
+Uso, desde la raíz del repositorio:
+    python src/grpc/nodo.py nodo-A --sesion 20261119-201500-bryan
+"""
+
+import argparse
+import csv
+import sys
+import threading
+from concurrent import futures
+from datetime import datetime
+from pathlib import Path
+
+import grpc
+
+RAIZ = Path(__file__).resolve().parents[2]
+if str(RAIZ) not in sys.path:
+    sys.path.insert(0, str(RAIZ))
+
+import mensajes_pb2
+import mensajes_pb2_grpc
+from src.common.config import HOST, NODOS
+
+ENCABEZADO = ["nodo", "tipo_evento", "reloj", "hora_real", "contraparte", "msg_id"]
+TIMEOUT_S = 10
+
+
+class RegistroEventos:
+    """Escribe los eventos de este nodo en su propio CSV."""
+
+    def __init__(self, ruta):
+        self.ruta = ruta
+        self.ruta.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.Lock()
+        self._archivo = None
+        self._escritor = None
+        self.reiniciar()
+
+    def reiniciar(self):
+        with self._lock:
+            if self._archivo is not None:
+                self._archivo.close()
+            self._archivo = self.ruta.open("w", encoding="utf-8", newline="")
+            self._escritor = csv.writer(self._archivo, lineterminator="\n")
+            self._escritor.writerow(ENCABEZADO)
+            self._archivo.flush()
+
+    def escribir(self, nodo, tipo_evento, reloj, contraparte, msg_id):
+        hora_real = datetime.now().isoformat(timespec="milliseconds")
+        with self._lock:
+            self._escritor.writerow(
+                [nodo, tipo_evento, reloj, hora_real, contraparte, msg_id]
+            )
+            self._archivo.flush()
+
+    def cerrar(self):
+        with self._lock:
+            if self._archivo is not None:
+                self._archivo.close()
+                self._archivo = None
+
+
+class Nodo:
+    """Estado de un nodo: nombre, puerto, reloj y registro de eventos."""
+
+    def __init__(self, nombre, sesion):
+        self.nombre = nombre
+        self.puerto = NODOS[nombre]
+        self.reloj = 0
+        self._lock = threading.Lock()
+        ruta = (
+            RAIZ
+            / "data"
+            / sesion
+            / "grpc"
+            / "eventos"
+            / "lamport-01"
+            / f"{nombre}.csv"
+        )
+        self.registro = RegistroEventos(ruta)
+
+    def reiniciar(self):
+        with self._lock:
+            self.reloj = 0
+        self.registro.reiniciar()
+
+    def siguiente_reloj(self):
+        """Regla de envío: incrementa el reloj antes de enviar."""
+        with self._lock:
+            self.reloj += 1
+            return self.reloj
+
+    def actualizar_reloj(self, timestamp_recibido):
+        """Regla de recepción: max(local, recibido) + 1."""
+        with self._lock:
+            self.reloj = max(self.reloj, timestamp_recibido) + 1
+            return self.reloj
+
+    def enviar(self, destino):
+        reloj = self.siguiente_reloj()
+        msg_id = f"{self.nombre}:{reloj}"
+        self.registro.escribir(self.nombre, "envio", reloj, destino, msg_id)
+        print(
+            f"[{self.nombre}] envio -> {destino} | reloj={reloj} | {msg_id}",
+            flush=True,
+        )
+
+        mensaje = mensajes_pb2.Mensaje(
+            sender=self.nombre,
+            timestamp=reloj,
+            message=f"Hola desde {self.nombre}",
+        )
+        with grpc.insecure_channel(f"{HOST}:{NODOS[destino]}") as canal:
+            stub = mensajes_pb2_grpc.MensajeriaStub(canal)
+            acuse = stub.EnviarMensaje(mensaje, timeout=TIMEOUT_S)
+        if not acuse.ok:
+            raise RuntimeError(f"{destino}: {acuse.error}")
+        return reloj
+
+
+class ServicioMensajeria(mensajes_pb2_grpc.MensajeriaServicer):
+    def __init__(self, nodo):
+        self.nodo = nodo
+
+    def EnviarMensaje(self, solicitud, contexto):
+        if solicitud.sender not in NODOS or solicitud.timestamp <= 0:
+            contexto.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            contexto.set_details("Mensaje invalido")
+            return mensajes_pb2.Acuse(ok=False, error="Mensaje invalido")
+
+        reloj = self.nodo.actualizar_reloj(solicitud.timestamp)
+        msg_id = f"{solicitud.sender}:{solicitud.timestamp}"
+        self.nodo.registro.escribir(
+            self.nodo.nombre, "recepcion", reloj, solicitud.sender, msg_id
+        )
+        print(
+            f"[{self.nodo.nombre}] recepcion <- {solicitud.sender} | "
+            f"reloj={reloj} | {msg_id}",
+            flush=True,
+        )
+        return mensajes_pb2.Acuse(ok=True, error="")
+
+
+class ServicioControl(mensajes_pb2_grpc.ControlServicer):
+    def __init__(self, nodo):
+        self.nodo = nodo
+
+    def Reiniciar(self, solicitud, contexto):
+        self.nodo.reiniciar()
+        print(f"[{self.nodo.nombre}] reiniciado (reloj=0)", flush=True)
+        return mensajes_pb2.Acuse(ok=True, error="")
+
+    def OrdenarEnvio(self, solicitud, contexto):
+        if solicitud.destino not in NODOS or solicitud.destino == self.nodo.nombre:
+            return mensajes_pb2.Acuse(ok=False, error="Destino invalido")
+        try:
+            self.nodo.enviar(solicitud.destino)
+        except grpc.RpcError as error:
+            detalle = f"{error.code().name}: {error.details()}"
+            print(f"[{self.nodo.nombre}] error: {detalle}", flush=True)
+            return mensajes_pb2.Acuse(ok=False, error=detalle)
+        except RuntimeError as error:
+            print(f"[{self.nodo.nombre}] error: {error}", flush=True)
+            return mensajes_pb2.Acuse(ok=False, error=str(error))
+        return mensajes_pb2.Acuse(ok=True, error="")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Nodo gRPC con reloj de Lamport.")
+    parser.add_argument("nombre", choices=sorted(NODOS))
+    parser.add_argument(
+        "--sesion",
+        required=True,
+        help="Identificador de sesión AAAAMMDD-HHMMSS-usuario",
+    )
+    args = parser.parse_args()
+
+    nodo = Nodo(args.nombre, args.sesion)
+    servidor = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    mensajes_pb2_grpc.add_MensajeriaServicer_to_server(
+        ServicioMensajeria(nodo), servidor
+    )
+    mensajes_pb2_grpc.add_ControlServicer_to_server(ServicioControl(nodo), servidor)
+
+    puerto = servidor.add_insecure_port(f"{HOST}:{nodo.puerto}")
+    if puerto == 0:
+        nodo.registro.cerrar()
+        raise RuntimeError(f"No se pudo abrir {HOST}:{nodo.puerto}")
+
+    servidor.start()
+    print(
+        f"[{nodo.nombre}] escuchando en {HOST}:{nodo.puerto} "
+        f"(sesion {args.sesion})",
+        flush=True,
+    )
+    try:
+        servidor.wait_for_termination()
+    except KeyboardInterrupt:
+        servidor.stop(grace=0)
+        print(f"\n[{nodo.nombre}] detenido.", flush=True)
+    finally:
+        nodo.registro.cerrar()
+
+
+if __name__ == "__main__":
+    main()

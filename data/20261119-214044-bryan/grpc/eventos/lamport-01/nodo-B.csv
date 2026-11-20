@@ -1,0 +1,15 @@
+nodo,tipo_evento,reloj,hora_real,contraparte,msg_id
+nodo-B,recepcion,2,2026-11-19T21:41:09.476,nodo-A,nodo-A:1
+nodo-B,envio,3,2026-11-19T21:41:09.477,nodo-C,nodo-B:3
+nodo-B,recepcion,10,2026-11-19T21:41:09.489,nodo-C,nodo-C:9
+nodo-B,envio,11,2026-11-19T21:41:09.489,nodo-A,nodo-B:11
+nodo-B,recepcion,14,2026-11-19T21:41:09.491,nodo-A,nodo-A:13
+nodo-B,envio,15,2026-11-19T21:41:09.491,nodo-C,nodo-B:15
+nodo-B,recepcion,22,2026-11-19T21:41:09.495,nodo-C,nodo-C:21
+nodo-B,envio,23,2026-11-19T21:41:09.495,nodo-A,nodo-B:23
+nodo-B,recepcion,26,2026-11-19T21:41:09.497,nodo-A,nodo-A:25
+nodo-B,envio,27,2026-11-19T21:41:09.497,nodo-C,nodo-B:27
+nodo-B,recepcion,34,2026-11-19T21:41:09.501,nodo-C,nodo-C:33
+nodo-B,envio,35,2026-11-19T21:41:09.501,nodo-A,nodo-B:35
+nodo-B,recepcion,38,2026-11-19T21:41:09.503,nodo-A,nodo-A:37
+nodo-B,envio,39,2026-11-19T21:41:09.503,nodo-C,nodo-B:39

@@ -9,6 +9,21 @@ NODOS = {
     "nodo-C": 5002,
 }
 
+# Secuencia de 20 intercambios acordada en docs/CONTRATO.md:
+# A->B, B->C, C->A, A->C, C->B, B->A (tres veces) y A->B, B->C.
+_CICLO_LAMPORT = [
+    ("nodo-A", "nodo-B"),
+    ("nodo-B", "nodo-C"),
+    ("nodo-C", "nodo-A"),
+    ("nodo-A", "nodo-C"),
+    ("nodo-C", "nodo-B"),
+    ("nodo-B", "nodo-A"),
+]
+RUTAS_LAMPORT = _CICLO_LAMPORT * 3 + [
+    ("nodo-A", "nodo-B"),
+    ("nodo-B", "nodo-C"),
+]
+
 N_INTERCAMBIOS = 20          # intercambios con reloj de Lamport
 N_ENVIOS_LATENCIA = 100      # envíos por corrida
 N_CORRIDAS = 5               # corridas medidas por mecanismo y tamaño (sin contar calentamiento)
