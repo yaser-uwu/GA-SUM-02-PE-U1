@@ -165,6 +165,86 @@ pasar a la siguiente ruta. Cada solicitud genera un evento de envío y uno de re
 así que el registro tiene 40 eventos. Los acuses se usan para medir la ida y vuelta y no
 entran al registro ni al reloj lógico.
 
+\section{Implementación}
+
+Los dos mecanismos siguen la misma estructura: tres procesos en \texttt{127.0.0.1}, con los
+puertos 5000, 5001 y 5002 definidos en \texttt{src/common/config.py}, y un reloj de Lamport
+por nodo protegido con un \texttt{Lock}, porque el servidor atiende los mensajes en un hilo
+distinto al que envía.
+
+\subsection{Sockets TCP}
+
+Un nodo (\texttt{src/sockets/server.py}) escucha en su puerto y abre una conexión nueva en
+cada envío. Como TCP entrega un flujo de bytes sin límites de mensaje, el protocolo
+usa el salto de línea como delimitador: el receptor lee una línea de hasta 65\,536 bytes y la
+rechaza si está incompleta o si se pasa del límite.
+
+\begin{lstlisting}[language=Python]
+def leer_json(entrada):
+    linea = entrada.readline(LIMITE + 1)
+    if not linea or len(linea) > LIMITE or not linea.endswith(b"\n"):
+        raise ValueError("Mensaje incompleto o demasiado largo")
+    return json.loads(linea.decode("utf-8"))
+\end{lstlisting}
+
+Los tipos no los garantiza nada fuera del código del programador. Por eso el receptor
+comprueba a mano que el mensaje tenga exactamente los campos \texttt{sender},
+\texttt{timestamp} y \texttt{message}, que el emisor sea otro nodo y que \texttt{timestamp} sea
+un entero positivo. Si algo falla, responde \texttt{\{"ok": false, "error": ...\}} y no
+modifica el reloj. Con un mensaje válido aplica la regla de recepción y registra el evento
+dentro del mismo bloque protegido:
+
+\begin{lstlisting}[language=Python]
+with self.lock:
+    self.reloj = max(self.reloj, reloj) + 1
+    self.evento("recepcion", origen, f"{origen}:{reloj}")
+\end{lstlisting}
+
+\subsection{gRPC}
+
+El contrato está en \texttt{proto/\allowbreak mensajes.proto}. El código de cliente y servidor
+se genera con \texttt{grpcio-tools}, de modo que el nodo no escribe ni lee bytes: invoca
+\texttt{EnviarMensaje} sobre un stub. El nodo está en \texttt{src/\allowbreak grpc/\allowbreak nodo.py} y su
+regla de recepción vive en un método:
+
+\begin{lstlisting}[language=Python]
+def actualizar_reloj(self, timestamp_recibido):
+    with self._lock:
+        self.reloj = max(self.reloj, timestamp_recibido) + 1
+        return self.reloj
+\end{lstlisting}
+
+Igual que en TCP, cada envío crea su propio canal hacia el destino, con un plazo máximo de
+10 segundos:
+
+\begin{lstlisting}[language=Python]
+with grpc.insecure_channel(f"{HOST}:{NODOS[destino]}") as canal:
+    stub = mensajes_pb2_grpc.MensajeriaStub(canal)
+    acuse = stub.EnviarMensaje(mensaje, timeout=TIMEOUT_S)
+\end{lstlisting}
+
+El \texttt{.proto} incluye además un servicio \texttt{Control} (\texttt{Reiniciar} y
+\texttt{OrdenarEnvio}) que usa el coordinador para ordenar los envíos; no forma parte del
+mensaje de datos ni del reloj.
+
+\subsection{Decisiones comunes}
+
+\begin{itemize}
+  \item \textbf{Mismo contenido de mensaje.} Ambos usan los campos \texttt{sender},
+        \texttt{timestamp} y \texttt{message}, con el reloj de Lamport del emisor como
+        \texttt{timestamp}.
+  \item \textbf{Misma secuencia.} Las 20 rutas salen de una lista en \texttt{config.py}
+        (ciclo A$\to$B, B$\to$C, C$\to$A, A$\to$C, C$\to$B, B$\to$A repetido tres veces,
+        más A$\to$B y B$\to$C).
+  \item \textbf{Una carpeta por ejecución e intento.} Al reiniciar los relojes los
+        identificadores de mensaje se repiten, y una corrida repetida deja varios CSV para la
+        misma medición. Por eso cada ejecución e intento guarda sus propios archivos, y el
+        análisis usa el intento completo de menor número.
+  \item \textbf{Mismo CSV de eventos.} Los dos escriben las columnas \texttt{nodo},
+        \texttt{tipo\_evento}, \texttt{reloj}, \texttt{hora\_real}, \texttt{contraparte} y
+        \texttt{msg\_id}, de modo que un solo verificador sirve para ambos.
+\end{itemize}
+
 \section{Protocolo experimental}
 
 Los dos mecanismos se comparan en la misma máquina, con los mismos tamaños de mensaje y
@@ -206,6 +286,49 @@ y su desviación estándar entre corridas. Si una corrida se repite, se usa el i
 completo de menor número y se excluyen los intentos fallidos y el calentamiento. Las
 barras de los gráficos muestran la media y un intervalo de $\pm 1$ desviación estándar.
 Las figuras y las tablas salen de \texttt{analysis/analisis.py}.
+
+\section{Discusión}
+
+\subsection{Desarrollo, tipado y manejo de errores}
+
+\paragraph{Facilidad de desarrollo.} En sockets TCP hubo que decidir el formato de los
+mensajes, el delimitador, el límite de tamaño y el cierre de las conexiones; en gRPC esas
+decisiones ya vienen resueltas por el protocolo y por el código generado desde el
+\texttt{.proto}. A cambio, gRPC exige instalar \texttt{grpcio-tools} y regenerar los
+archivos \texttt{mensajes\_pb2*.py} cada vez que cambia el contrato.
+
+\paragraph{Tipado.} En el contrato, \texttt{timestamp} es un \texttt{int64}, y el código
+generado impide asignarle un texto. En TCP el campo es solo un valor dentro de un JSON, y
+el servidor tiene que verificarlo a mano (\texttt{type(reloj) is not int}). El
+\texttt{.proto} también documenta los campos, mientras que en TCP esa información queda
+repartida entre el código del cliente y el del servidor.
+
+\paragraph{Manejo de errores.} En TCP el servidor construye la respuesta de error
+(\texttt{ok: false} y un texto) y el cliente decide qué hacer con ella. En gRPC el
+servidor marca el estado de la llamada (por ejemplo, \texttt{INVALID\_ARGUMENT}) y el
+cliente recibe una excepción con ese código y su detalle, además del \texttt{Acuse}
+con \texttt{ok} y \texttt{error}, que este proyecto define en el \texttt{.proto}.
+
+\subsection{Amenazas a la validez}
+
+\begin{itemize}
+  \item \textbf{Una sola máquina y sin red.} Los tres nodos son procesos en
+        \texttt{localhost}. El tráfico pasa por el loopback, así que las latencias no
+        representan un despliegue en varias máquinas.
+  \item \textbf{Equipos distintos.} El equipo no trabaja en un solo sistema operativo:
+        Carlos probó en Linux y los comandos de Kevin están escritos para PowerShell. Si las
+        corridas oficiales de TCP y de gRPC no se hacen en la misma máquina, la comparación
+        mezcla el mecanismo con el equipo.
+  \item \textbf{Costo del registro.} En el modo de Lamport, cada evento se escribe en un CSV
+        y se vacía el búfer al instante. Para medir latencia, el nodo gRPC se inicia con
+        \texttt{--sin-eventos}, de modo que esa escritura no entre en el tiempo medido.
+  \item \textbf{Conexión por envío.} Los nodos de Lamport abren una conexión nueva en cada
+        envío, en los dos mecanismos. Si la medición de latencia hace lo mismo, el tiempo
+        incluye ese costo, y un sistema con conexiones persistentes podría dar otra
+        diferencia.
+  \item \textbf{Tamaños y contenido.} Solo se prueban dos tamaños, 100 B y 10 KB, con texto
+        ASCII.
+\end{itemize}
 
 \section{Verificación del reloj de Lamport}
 
