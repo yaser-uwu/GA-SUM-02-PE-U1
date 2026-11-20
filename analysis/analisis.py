@@ -1,17 +1,23 @@
 """Lector del experimento PE-U1 (sockets TCP y gRPC).
 
-Lee y agrupa los CSV de una sesión, comprueba que cumplan docs/CONTRATO.md y
-calcula la latencia y el rendimiento por mecanismo, modo y tamaño.
+Lee y agrupa los CSV de una sesión, comprueba que cumplan docs/CONTRATO.md,
+calcula la latencia y el rendimiento por mecanismo, modo y tamaño, y genera las
+figuras (docs/figures) y las tablas LaTeX (docs/tablas) del informe.
 
 Uso, desde la raíz del repositorio:
     python analysis/analisis.py data/<sesion>
+    python analysis/analisis.py data/<sesion> --salida otra_carpeta
 """
 import argparse
 import sys
 from itertools import product
 from pathlib import Path
 
+import matplotlib
 import pandas as pd
+
+matplotlib.use("Agg")  # solo guarda archivos, no abre ventanas
+import matplotlib.pyplot as plt  # noqa: E402
 
 COLS_LATENCIA = ["mecanismo", "tamano", "tamano_bytes", "modo", "corrida", "envio_n", "rtt_s"]
 COLS_DURACION = ["mecanismo", "tamano", "tamano_bytes", "modo", "corrida",
@@ -21,6 +27,9 @@ CORRIDAS_VALIDAS = {"secuencial": 5, "concurrente": 1}
 MECANISMOS = ["sockets", "grpc"]
 ENVIOS = 100
 CLAVE = ["mecanismo", "modo", "tamano", "corrida"]
+NOMBRE = {"sockets": "Sockets TCP", "grpc": "gRPC"}
+COLOR = {"sockets": "#0072B2", "grpc": "#E69F00"}
+DPI = 300
 
 
 def leer_csv(ruta, columnas):
@@ -122,9 +131,103 @@ def calcular_metricas(lat_usada, usados):
     return latencia.merge(rendimiento, on=grupo)
 
 
+def figura_cajas(lat_usada, ruta):
+    """Diagrama de cajas de la latencia (ms) en las corridas secuenciales válidas."""
+    datos = lat_usada[(~lat_usada["calentamiento"]) & (lat_usada["modo"] == "secuencial")]
+    fig, ejes = plt.subplots(1, 2, figsize=(8, 4))
+    for eje, tamano in zip(ejes, TAMANO_BYTES):
+        grupos = []
+        for mecanismo in MECANISMOS:
+            filas = datos[(datos["mecanismo"] == mecanismo) & (datos["tamano"] == tamano)]
+            grupos.append(filas["rtt_s"] * 1000)
+        cajas = eje.boxplot(grupos, patch_artist=True)
+        for caja, mecanismo in zip(cajas["boxes"], MECANISMOS):
+            caja.set_facecolor(COLOR[mecanismo])
+        for mediana in cajas["medians"]:
+            mediana.set_color("black")
+        eje.set_xticks([1, 2])
+        eje.set_xticklabels([NOMBRE[m] for m in MECANISMOS])
+        eje.set_title(f"Mensaje {tamano} ({TAMANO_BYTES[tamano]} B)")
+        eje.set_ylabel("Latencia RTT (ms)")
+    fig.tight_layout()
+    fig.savefig(ruta, dpi=DPI)
+    plt.close(fig)
+
+
+def figura_barras(metricas, media, desv, etiqueta, ruta):
+    """Barras de una métrica (media ± desviación estándar) en modo secuencial."""
+    secuencial = metricas[metricas["modo"] == "secuencial"]
+    ancho = 0.35
+    fig, eje = plt.subplots(figsize=(6, 4))
+    for mecanismo, desplazamiento in zip(MECANISMOS, [-ancho / 2, ancho / 2]):
+        g = secuencial[secuencial["mecanismo"] == mecanismo].set_index("tamano")
+        g = g.reindex(list(TAMANO_BYTES))  # un valor por tamaño, en el orden corto, largo
+        eje.bar([0 + desplazamiento, 1 + desplazamiento], g[media], ancho,
+                yerr=g[desv], capsize=4, color=COLOR[mecanismo], label=NOMBRE[mecanismo])
+    eje.set_xticks([0, 1])
+    eje.set_xticklabels([f"{t} ({b} B)" for t, b in TAMANO_BYTES.items()])
+    eje.set_xlabel("Tamaño del mensaje")
+    eje.set_ylabel(etiqueta)
+    eje.legend()
+    fig.tight_layout()
+    fig.savefig(ruta, dpi=DPI)
+    plt.close(fig)
+
+
+def numero(valor, decimales):
+    """Número con coma decimal para LaTeX en español; '---' si no hay valor."""
+    if pd.isna(valor):
+        return "---"
+    return f"{valor:.{decimales}f}".replace(".", "{,}")
+
+
+def escribir_tabla(metricas, columnas, encabezados, ruta):
+    """Escribe un tabular con booktabs.
+
+    columnas: {nombre de columna: decimales}. Antes de ellas van mecanismo, modo y tamaño.
+    """
+    lineas = [r"\small\setlength{\tabcolsep}{4pt}",
+              r"\begin{tabular}{lll" + "r" * len(columnas) + "}",
+              r"\toprule",
+              " & ".join(["Mecanismo", "Modo", "Tamaño"] + encabezados) + r" \\",
+              r"\midrule"]
+    for _, fila in metricas.iterrows():
+        celdas = [NOMBRE[fila["mecanismo"]], fila["modo"], fila["tamano"]]
+        for columna, decimales in columnas.items():
+            celdas.append(numero(fila[columna], decimales))
+        lineas.append(" & ".join(celdas) + r" \\")
+    lineas += [r"\bottomrule", r"\end{tabular}"]
+    ruta.write_text("\n".join(lineas) + "\n", encoding="utf-8")
+
+
+def guardar_resultados(lat_usada, metricas, salida):
+    """Guarda las figuras en <salida>/figures y las tablas en <salida>/tablas."""
+    figuras = salida / "figures"
+    tablas = salida / "tablas"
+    figuras.mkdir(parents=True, exist_ok=True)
+    tablas.mkdir(parents=True, exist_ok=True)
+
+    figura_cajas(lat_usada, figuras / "latencia_cajas.png")
+    figura_barras(metricas, "media_ms", "desv_ms",
+                  "Latencia media ± desviación estándar (ms)", figuras / "latencia_barras.png")
+    figura_barras(metricas, "msg_s_media", "msg_s_desv",
+                  "Rendimiento medio ± desviación estándar (mensajes/s)",
+                  figuras / "rendimiento_barras.png")
+
+    escribir_tabla(metricas,
+                   {"muestras": 0, "media_ms": 3, "mediana_ms": 3, "desv_ms": 3, "p95_ms": 3},
+                   ["$n$", "Media", "Mediana", "Desv.", "P95"], tablas / "latencia.tex")
+    escribir_tabla(metricas, {"corridas": 0, "msg_s_media": 3, "msg_s_desv": 3},
+                   ["Corridas", "Media", "Desv."], tablas / "rendimiento.tex")
+    print(f"Figuras guardadas en {figuras}")
+    print(f"Tablas guardadas en {tablas}")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Lee y valida los CSV de una sesión.")
+    parser = argparse.ArgumentParser(description="Analiza una sesión del experimento PE-U1.")
     parser.add_argument("sesion", help="carpeta data/<sesion>")
+    parser.add_argument("--salida", default="docs", type=Path,
+                        help="carpeta donde se guardan figures/ y tablas/ (por defecto docs)")
     args = parser.parse_args()
 
     lat, dur = cargar_sesion(args.sesion)
@@ -137,7 +240,11 @@ def main():
     print(resumen.to_string(index=False))
 
     print()
-    print(calcular_metricas(lat_usada, usados).round(3).to_string(index=False))
+    metricas = calcular_metricas(lat_usada, usados)
+    print(metricas.round(3).to_string(index=False))
+
+    print()
+    guardar_resultados(lat_usada, metricas, args.salida)
 
     avisos = revisar_protocolo(usados)
     for aviso in avisos:
