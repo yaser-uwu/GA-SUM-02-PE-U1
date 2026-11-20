@@ -9,6 +9,9 @@
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\lstset{basicstyle=\ttfamily\small, columns=fullflexible, frame=single, breaklines=true}
 \usepackage[hidelinks]{hyperref}
 \usepackage[backend=biber,style=ieee]{biblatex}
 \addbibresource{referencias.bib}
@@ -61,5 +64,148 @@ más de protocolo, HTTP/2. En TCP solo se envía el JSON.
 
 Esta hipótesis se escribió el 18 de noviembre de 2026, antes de ejecutar las mediciones
 oficiales.
+
+\section{Marco conceptual}
+
+\subsection{Sockets TCP}
+
+TCP entrega los datos entre dos procesos como un flujo de bytes fiable y ordenado
+\cite{eddy2022}. Como es un flujo y no una secuencia de mensajes, el receptor no sabe
+dónde termina cada uno. En esta práctica cada mensaje JSON termina con un salto de línea
+y el servidor lee hasta encontrarlo. Después de procesarlo, el servidor devuelve un
+acuse y el cliente lo espera antes de continuar.
+
+\subsection{gRPC y Protocol Buffers}
+
+En gRPC el servicio y los mensajes se declaran en un archivo \texttt{.proto}. La
+herramienta \texttt{grpcio-tools} genera a partir de él el código Python del cliente y
+del servidor, y los mensajes viajan codificados en binario sobre HTTP/2 \cite{ain2025}.
+A diferencia de los sockets, el \texttt{.proto} fija el tipo y los campos de cada
+mensaje, y el acuse forma parte de la llamada.
+
+Otros trabajos comparan gRPC con otras tecnologías. Kamiński et al.\ midieron REST,
+WebSocket, gRPC y GraphQL con servidores en Python y concluyeron que gRPC fue el método
+más eficiente y confiable \cite{kaminski2023}. Niswar et al.\ reportan que gRPC tuvo
+menor tiempo de respuesta que REST y GraphQL en una arquitectura de microservicios
+\cite{niswar2024}. Ain et al.\ encontraron que REST rinde más con poco tráfico y gRPC con
+transferencias grandes, aunque su ANOVA no mostró una diferencia significativa
+\cite{ain2025}. Chandra y Farisi describen a gRPC con latencia y consumo de recursos
+moderados \cite{chandra2025}. Los resúmenes de estos trabajos no reportan una comparación
+contra sockets TCP directos, que es lo que mide esta práctica.
+
+\subsection{Relojes lógicos de Lamport}
+
+Sin un reloj físico común, Lamport ordena los eventos con un contador por proceso
+\cite{lamport1978}. Cada nodo $i$ mantiene un reloj $C_i$ que empieza en 0:
+\begin{itemize}
+  \item antes de enviar un mensaje, $C_i \leftarrow C_i + 1$, y el mensaje lleva ese valor;
+  \item al recibir un mensaje con valor $t$, $C_i \leftarrow \max(C_i, t) + 1$.
+\end{itemize}
+Si un evento $a$ ocurre antes que $b$ ($a \rightarrow b$), entonces $C(a) < C(b)$. Lo
+contrario no se cumple: $C(a) < C(b)$ no implica $a \rightarrow b$. Dos eventos
+concurrentes de nodos distintos pueden tener el mismo valor de reloj, y por eso Lamport
+no los distingue.
+
+\section{Arquitectura}
+
+Los tres nodos son procesos que corren en \texttt{127.0.0.1}. Cada uno tiene un servidor
+que recibe mensajes, un cliente que los envía y su propio reloj de Lamport
+(tabla~\ref{tab:nodos}). Los dos mecanismos usan los mismos nodos y puertos.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Nodos del sistema.}
+  \label{tab:nodos}
+  \begin{tabular}{lll}
+    \toprule
+    Nodo & Dirección & Puerto \\
+    \midrule
+    nodo-A & 127.0.0.1 & 5000 \\
+    nodo-B & 127.0.0.1 & 5001 \\
+    nodo-C & 127.0.0.1 & 5002 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      nodo/.style={draw, rounded corners, minimum width=3cm, minimum height=1.1cm,
+                   align=center},
+      flecha/.style={-{Stealth[length=2.5mm]}, bend left=15}]
+    \node[nodo] (A) at (0,3)    {nodo-A\\{\small 127.0.0.1:5000}};
+    \node[nodo] (B) at (-3.5,0) {nodo-B\\{\small 127.0.0.1:5001}};
+    \node[nodo] (C) at (3.5,0)  {nodo-C\\{\small 127.0.0.1:5002}};
+    \draw[flecha] (A) to (B);
+    \draw[flecha] (B) to (A);
+    \draw[flecha] (B) to (C);
+    \draw[flecha] (C) to (B);
+    \draw[flecha] (C) to (A);
+    \draw[flecha] (A) to (C);
+  \end{tikzpicture}
+  \caption{Los tres nodos y las seis rutas de mensajes de la secuencia de Lamport.}
+  \label{fig:nodos}
+\end{figure}
+
+Cada mensaje tiene tres campos: \texttt{sender}, \texttt{timestamp} (el reloj de Lamport
+del emisor al enviar) y \texttt{message}. En sockets viaja como JSON y en gRPC como el
+mensaje del \texttt{.proto} de la figura~\ref{lst:proto}.
+
+\begin{figure}[htbp]
+  \lstinputlisting{../proto/mensajes.proto}
+  \caption{Archivo \texttt{proto/mensajes.proto}.}
+  \label{lst:proto}
+\end{figure}
+
+La secuencia de Lamport tiene 20 solicitudes: las rutas A$\rightarrow$B, B$\rightarrow$C,
+C$\rightarrow$A, A$\rightarrow$C, C$\rightarrow$B y B$\rightarrow$A se ejecutan tres
+veces, y después A$\rightarrow$B y B$\rightarrow$C. El emisor espera el acuse antes de
+pasar a la siguiente ruta. Cada solicitud genera un evento de envío y uno de recepción,
+así que el registro tiene 40 eventos. Los acuses se usan para medir la ida y vuelta y no
+entran al registro ni al reloj lógico.
+
+\section{Protocolo experimental}
+
+Los dos mecanismos se comparan en la misma máquina, con los mismos tamaños de mensaje y
+el mismo número de envíos. El campo \texttt{message} mide 100 bytes en el tamaño corto y
+10240 bytes en el largo.
+
+\paragraph{Corridas secuenciales.} Para cada combinación de mecanismo y tamaño se hace una
+corrida de calentamiento (corrida 0) y cinco corridas válidas (corridas 1 a 5), de 100
+envíos cada una. En total son 24 corridas y 2400 solicitudes, con el calentamiento
+incluido.
+
+\paragraph{Corrida concurrente.} Para cada combinación de mecanismo y tamaño hay una
+corrida con los tres clientes enviando a la vez, de 100 solicitudes en total
+(tabla~\ref{tab:concurrencia}). Un coordinador da la señal de inicio y reúne las muestras
+de los tres clientes en un solo archivo.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Reparto de las 100 solicitudes de la corrida concurrente.}
+  \label{tab:concurrencia}
+  \begin{tabular}{llrl}
+    \toprule
+    Cliente & Destino & Solicitudes & Envíos \\
+    \midrule
+    nodo-A & nodo-B & 34 & 1 a 34 \\
+    nodo-B & nodo-C & 33 & 35 a 67 \\
+    nodo-C & nodo-A & 33 & 68 a 100 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Métricas.} La latencia de cada envío es el tiempo de ida y vuelta, medido con
+\texttt{time.\allowbreak perf\_\allowbreak counter()} desde justo antes del envío hasta recibir el acuse. Para cada
+combinación de mecanismo, modo y tamaño se calculan la media, la mediana, la desviación
+estándar muestral ($n-1$) y el percentil 95 con interpolación lineal, sobre las latencias
+de todas las corridas válidas. El rendimiento de una corrida es
+$\text{envíos exitosos} / \text{duración}$, en mensajes por segundo; se informa su media
+y su desviación estándar entre corridas. Si una corrida se repite, se usa el intento
+completo de menor número y se excluyen los intentos fallidos y el calentamiento. Las
+barras de los gráficos muestran la media y un intervalo de $\pm 1$ desviación estándar.
+Las figuras y las tablas salen de \texttt{analysis/analisis.py}.
+
+\printbibliography
 
 \end{document}
