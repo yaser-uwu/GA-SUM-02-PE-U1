@@ -116,7 +116,6 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Verificación de integridad:** Se añadió `--verificar` al script SHA-256 para poder comprobar las huellas con Python. Las pruebas locales confirmaron que detecta cambios, archivos faltantes y CSV nuevos sin huella. Los archivos de prueba se usaron en una carpeta temporal.
 
 
-<<<<<<< HEAD
 ## 2026-11-19 — Eduardo David Reinoso Vélez
 - **Presentes:** Eduardo Reinoso.
 - **Realizado:**
@@ -133,7 +132,7 @@ Pendiente de añadir el enlace del primer avance TCP.
   - Queda pendiente comparar el diagrama con el de FORM-TL-01.
 - **Uso de inteligencia artificial:** usé Claude (Sonnet 5.5) como asistente. Yo definí qué debía calcular y graficar el script, escogí la hipótesis y decidí reemplazar la referencia sin DOI. A partir de esas instrucciones, Claude escribió el código del script, reescribió el texto de las secciones y buscó las referencias. Yo comprobé los DOI en el navegador y revisé el código y el texto.
 - **Commits:** https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/128534d y https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/8cbc828
-=======
+
 ## 2026-11-19 — Bryan Humberto Lombeida Escaleras
 - **Presentes:** Bryan Lombeida (sesión individual).
 - **Realizado:**
@@ -156,7 +155,6 @@ Pendiente de añadir el enlace del primer avance TCP.
   - Utilicé el agente OpenCode (modelo DeepSeek V4.1 Flash Free) para implementar los nodos, el coordinador y la integración del CSV. Revisé el código y ejecuté las pruebas antes de dejar este avance.
 - **Aviso para Carlos Manotoa y el equipo:**
   - El CSV real de gRPC ya está disponible en `data/20261119-220530-bryan/grpc/eventos/lamport-01/eventos.csv`. Contiene los 20 intercambios Lamport (40 eventos) y pasó la verificación. Cualquiera que necesite este CSV para el análisis, las huellas SHA-256 o la comparación con TCP puede usarlo.
->>>>>>> 6b94022 (Implementación del sistema de nodos gRPC con reloj de Lamport)
 
 ## 2026-11-19 — Kevin Leonel García Bazurto
 
@@ -171,3 +169,24 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Problemas encontrados:** Los nombres anteriores `cliente.py` y `servidor.py` no coincidían con el contrato.
 - **Solución:** Renombré ambos archivos y actualicé las instrucciones con los nombres actuales.
 - **Uso de inteligencia artificial:** Utilicé ChatGPT Sol 6.1 mediante Codex como apoyo para preparar parte del código y la documentación y como ayuda para revisar el contrato. Ejecuté el programa en mi equipo y comprobé el resultado del verificador.
+
+
+## 2026-11-20 — Bryan Humberto Lombeida Escaleras
+- **Presentes:** Bryan Lombeida (sesión individual).
+- **Realizado:**
+  - Agregué `--sin-eventos` a `src/grpc/nodo.py` para que los nodos atiendan las llamadas de latencia sin actualizar el reloj de Lamport ni escribir eventos. El modo normal de Lamport quedó igual.
+  - Implementé `src/grpc/coordinador_latencia.py`: ejecuta 100 envíos secuenciales, repitiendo cinco veces las 20 rutas, mide el RTT de cada llamada con `time.perf_counter()` y escribe `latencia.csv` y `duracion.csv` en la ruta del contrato. Permite iniciar los nodos automáticamente o usar `--manual` con nodos ya iniciados.
+  - Ejecuté el piloto de 100 bytes con la sesión `20261120-002144-bryan`, en `corrida-00` (calentamiento): 100/100 envíos, 100 filas únicas, duración `0.053090 s`, RTT mínimo `0.424 ms`, mediano `0.475 ms` y máximo `2.405 ms`; estado `completa` y verificación `CORRECTA`.
+  - Los datos quedaron en `data/20261120-002144-bryan/grpc/latencia/secuencial/corto/corrida-00/intento-01/`. No es una corrida válida: es el calentamiento.
+  - Probé también el modo manual, el tamaño largo de 10240 bytes y una corrida temporal de regresión de Lamport; los 20 pares de Lamport siguieron verificándose correctamente.
+  - Documenté los comandos automático y manual en `readme.md`.
+  - Se agregaron cinco capturas en `screenshots/`: los tres nodos con `--sin-eventos`, el coordinador del piloto y los CSV.
+- **Problemas encontrados:**
+  - El `.venv` local no tiene `matplotlib` ni `pandas`, así que no se pudo ejecutar `analysis/analisis.py`; validé la estructura y el contenido de los CSV con comprobaciones propias.
+- **Solución:**
+  - El piloto se validó con un chequeo de 100 filas, numeración del 1 al 100, RTT positivos y `duracion.csv` completa. El análisis gráfico queda para cuando el equipo tenga esas dependencias.
+- **Pendiente de coordinación:**
+  - Antes de las corridas oficiales, acordar con Carlos y Kevin la máquina y el mismo identificador de sesión para TCP y gRPC. Después se ejecutan las corridas `1` a `5` por tamaño y la prueba concurrente.
+  - Cuando estén los CSV completos, entregarlos a Eduardo para el análisis y acordar con Carlos la ficha de la máquina y `data/SHA256SUMS`.
+- **Uso de inteligencia artificial:**
+  - Utilicé el agente OpenCode (modelo DeepSeek V4.1 Flash Free) como apoyo para preparar parte del código y la documentación, el modo de latencia, el coordinador, y como ayuda para revisar el contrato. Revisé el código y ejecuté el piloto y las pruebas de regresión.

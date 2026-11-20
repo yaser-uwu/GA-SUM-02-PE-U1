@@ -64,26 +64,30 @@ class RegistroEventos:
 class Nodo:
     """Estado de un nodo: nombre, puerto, reloj y registro de eventos."""
 
-    def __init__(self, nombre, sesion):
+    def __init__(self, nombre, sesion, registrar_eventos=True):
         self.nombre = nombre
         self.puerto = NODOS[nombre]
         self.reloj = 0
+        self.registrar_eventos = registrar_eventos
         self._lock = threading.Lock()
-        ruta = (
-            RAIZ
-            / "data"
-            / sesion
-            / "grpc"
-            / "eventos"
-            / "lamport-01"
-            / f"{nombre}.csv"
-        )
-        self.registro = RegistroEventos(ruta)
+        self.registro = None
+        if registrar_eventos:
+            ruta = (
+                RAIZ
+                / "data"
+                / sesion
+                / "grpc"
+                / "eventos"
+                / "lamport-01"
+                / f"{nombre}.csv"
+            )
+            self.registro = RegistroEventos(ruta)
 
     def reiniciar(self):
         with self._lock:
             self.reloj = 0
-        self.registro.reiniciar()
+        if self.registro is not None:
+            self.registro.reiniciar()
 
     def siguiente_reloj(self):
         """Regla de envío: incrementa el reloj antes de enviar."""
@@ -100,7 +104,8 @@ class Nodo:
     def enviar(self, destino):
         reloj = self.siguiente_reloj()
         msg_id = f"{self.nombre}:{reloj}"
-        self.registro.escribir(self.nombre, "envio", reloj, destino, msg_id)
+        if self.registro is not None:
+            self.registro.escribir(self.nombre, "envio", reloj, destino, msg_id)
         print(
             f"[{self.nombre}] envio -> {destino} | reloj={reloj} | {msg_id}",
             flush=True,
@@ -129,16 +134,17 @@ class ServicioMensajeria(mensajes_pb2_grpc.MensajeriaServicer):
             contexto.set_details("Mensaje invalido")
             return mensajes_pb2.Acuse(ok=False, error="Mensaje invalido")
 
-        reloj = self.nodo.actualizar_reloj(solicitud.timestamp)
-        msg_id = f"{solicitud.sender}:{solicitud.timestamp}"
-        self.nodo.registro.escribir(
-            self.nodo.nombre, "recepcion", reloj, solicitud.sender, msg_id
-        )
-        print(
-            f"[{self.nodo.nombre}] recepcion <- {solicitud.sender} | "
-            f"reloj={reloj} | {msg_id}",
-            flush=True,
-        )
+        if self.nodo.registrar_eventos:
+            reloj = self.nodo.actualizar_reloj(solicitud.timestamp)
+            msg_id = f"{solicitud.sender}:{solicitud.timestamp}"
+            self.nodo.registro.escribir(
+                self.nodo.nombre, "recepcion", reloj, solicitud.sender, msg_id
+            )
+            print(
+                f"[{self.nodo.nombre}] recepcion <- {solicitud.sender} | "
+                f"reloj={reloj} | {msg_id}",
+                flush=True,
+            )
         return mensajes_pb2.Acuse(ok=True, error="")
 
 
@@ -174,9 +180,18 @@ def main():
         required=True,
         help="Identificador de sesión AAAAMMDD-HHMMSS-usuario",
     )
+    parser.add_argument(
+        "--sin-eventos",
+        action="store_true",
+        help="No registrar eventos de Lamport (solo para medir latencia)",
+    )
     args = parser.parse_args()
 
-    nodo = Nodo(args.nombre, args.sesion)
+    nodo = Nodo(
+        args.nombre,
+        args.sesion,
+        registrar_eventos=not args.sin_eventos,
+    )
     servidor = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     mensajes_pb2_grpc.add_MensajeriaServicer_to_server(
         ServicioMensajeria(nodo), servidor
@@ -185,13 +200,15 @@ def main():
 
     puerto = servidor.add_insecure_port(f"{HOST}:{nodo.puerto}")
     if puerto == 0:
-        nodo.registro.cerrar()
+        if nodo.registro is not None:
+            nodo.registro.cerrar()
         raise RuntimeError(f"No se pudo abrir {HOST}:{nodo.puerto}")
 
     servidor.start()
+    modo = "sin eventos" if args.sin_eventos else "eventos Lamport"
     print(
         f"[{nodo.nombre}] escuchando en {HOST}:{nodo.puerto} "
-        f"(sesion {args.sesion})",
+        f"(sesion {args.sesion}, {modo})",
         flush=True,
     )
     try:
@@ -200,7 +217,8 @@ def main():
         servidor.stop(grace=0)
         print(f"\n[{nodo.nombre}] detenido.", flush=True)
     finally:
-        nodo.registro.cerrar()
+        if nodo.registro is not None:
+            nodo.registro.cerrar()
 
 
 if __name__ == "__main__":

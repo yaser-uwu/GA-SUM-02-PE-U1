@@ -126,6 +126,50 @@ python src/grpc/coordinador_lamport.py
 En ese caso genera automáticamente un identificador de sesión y ejecuta la
 misma secuencia de 20 intercambios.
 
+## Medición de latencia gRPC
+
+El piloto mide 100 envíos secuenciales, repitiendo cinco veces las 20 rutas del
+contrato, y escribe `latencia.csv` y `duracion.csv`. Los nodos se inician con
+`--sin-eventos` para que el registro de Lamport no intervenga en la medición.
+
+### Modo automático
+
+```bash
+python src/grpc/coordinador_latencia.py --sesion 20261120-002144-bryan --tamano corto --corrida 0
+```
+
+`corrida 0` es el calentamiento. Para las corridas válidas usa `--corrida 1`
+hasta `--corrida 5`. El resultado queda en:
+
+```text
+data/<sesion>/grpc/latencia/secuencial/<tamano>/corrida-<NN>/intento-01/latencia.csv
+data/<sesion>/grpc/latencia/secuencial/<tamano>/corrida-<NN>/intento-01/duracion.csv
+```
+
+### Modo manual
+
+Inicia los tres nodos en terminales separadas, todos con `--sin-eventos`:
+
+```bash
+python src/grpc/nodo.py nodo-A --sesion 20261120-002144-bryan --sin-eventos
+python src/grpc/nodo.py nodo-B --sesion 20261120-002144-bryan --sin-eventos
+python src/grpc/nodo.py nodo-C --sesion 20261120-002144-bryan --sin-eventos
+```
+
+En una cuarta terminal ejecuta el coordinador:
+
+```bash
+python src/grpc/coordinador_latencia.py --manual --sesion 20261120-002144-bryan --tamano corto --corrida 0
+```
+
+La salida debe terminar con:
+
+```text
+100/100 envíos OK
+Resultado: 100/100 envíos OK | ... | estado=completa
+Verificación del piloto: CORRECTA
+```
+
 ## Ejecución de los tres nodos con sockets TCP y reloj de Lamport
 
 Responsable: Kevin Leonel García Bazurto.
