@@ -26,14 +26,17 @@ def leer_json(entrada):
 
 
 class Nodo:
-    def __init__(self, nombre, host, puertos):
+    def __init__(self, nombre, host, puertos, registrar_eventos=True):
         self.nombre = nombre
         self.host = host
         self.puertos = puertos
         self.reloj = 0
+        self.registrar_eventos = registrar_eventos
         self.lock = threading.Lock()
 
     def evento(self, tipo, contraparte, msg_id):
+        if not self.registrar_eventos:
+            return
         informar("evento", datos={
             "nodo": self.nombre,
             "tipo_evento": tipo,
@@ -104,11 +107,13 @@ def main():
     parser.add_argument("--nodo", choices=NODOS, required=True)
     parser.add_argument("--host", default=HOST)
     parser.add_argument("--puerto-base", type=int, default=min(NODOS.values()))
+    parser.add_argument("--sin-eventos", action="store_true",
+                        help="Desactiva el registro de eventos durante las mediciones")
     args = parser.parse_args()
     if not 1 <= args.puerto_base <= 65533:
         parser.error("Puerto base fuera de rango")
     puertos = {nombre: args.puerto_base + i for i, nombre in enumerate(NODOS)}
-    nodo = Nodo(args.nodo, args.host, puertos)
+    nodo = Nodo(args.nodo, args.host, puertos, registrar_eventos=not args.sin_eventos)
     detener = threading.Event()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
         servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
