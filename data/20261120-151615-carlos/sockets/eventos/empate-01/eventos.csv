@@ -1,0 +1,5 @@
+nodo,tipo_evento,reloj,hora_real,contraparte,msg_id
+nodo-A,envio,1,2026-11-20T15:16:15.827,nodo-C,nodo-A:1
+nodo-B,envio,1,2026-11-20T15:16:15.827,nodo-C,nodo-B:1
+nodo-C,recepcion,2,2026-11-20T15:16:15.827,nodo-B,nodo-B:1
+nodo-C,recepcion,3,2026-11-20T15:16:15.827,nodo-A,nodo-A:1

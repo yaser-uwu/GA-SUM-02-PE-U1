@@ -190,3 +190,12 @@ Pendiente de añadir el enlace del primer avance TCP.
   - Cuando estén los CSV completos, entregarlos a Eduardo para el análisis y acordar con Carlos la ficha de la máquina y `data/SHA256SUMS`.
 - **Uso de inteligencia artificial:**
   - Utilicé el agente OpenCode (modelo DeepSeek V4.1 Flash Free) como apoyo para preparar parte del código y la documentación, el modo de latencia, el coordinador, y como ayuda para revisar el contrato. Revisé el código y ejecuté el piloto y las pruebas de regresión.
+
+## 2026-11-20 — Carlos Manotoa
+- **Presentes:** Carlos.
+- **Realizado:** Se verificaron los CSV de Lamport de TCP y gRPC. Cada ejecución revisada tuvo 20 pares válidos y cero errores. El piloto gRPC de 100 bytes tuvo 100 muestras positivas, numeradas del 1 al 100. Corresponde al calentamiento.
+- **Evidencia del empate:** Se ejecutaron tres procesos TCP con relojes inicialmente en cero. A y B enviaron a C sin depender entre sí y registraron `nodo-A:1` y `nodo-B:1`, ambos con reloj 1. C registró las recepciones con reloj 3 para A y reloj 2 para B. El verificador aceptó los dos pares. [CSV de la ejecución](data/20261120-151615-carlos/sockets/eventos/empate-01/eventos.csv).
+- **Captura del nodo C:** Tomé la captura en mi equipo durante una ejecución TCP. Se ven el usuario, el nombre de la máquina, la fecha y hora, el nodo C escuchando en el puerto 5002 y la recepción del mensaje `nodo-A:1` con reloj 2. [Captura](screenshots/TCP_nodo-C_Carlos_20261120.png).
+- **Problemas encontrados:** Los 20 intercambios acordados se ejecutan en secuencia. Para demostrar el empate hacía falta una ejecución en la que los emisores fueran independientes. En esta copia aún faltan la medición de latencia TCP y la prueba concurrente de latencia.
+- **Solución:** Se usó `analysis/comprobar_empate_tcp.py --sesion <sesion>` con dos envíos independientes al nodo C. La prueba de empate quedó separada de las mediciones de latencia.
+- **Pendiente de coordinación:** Confirmar la máquina y la sesión comunes, completar el piloto TCP y los dos modos concurrentes, y generar las huellas cuando estén todos los CSV oficiales.
