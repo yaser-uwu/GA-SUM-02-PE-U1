@@ -278,9 +278,6 @@ Las solicitudes y los acuses usan JSON UTF-8 delimitado por un salto de línea. 
 ### Uso de inteligencia artificial
 
 Se utilizó ChatGPT Sol 6.1 mediante Codex como apoyo para preparar el código y mejorar parte de la documentación y revisar el contrato. Yo ejecuté el programa en mi equipo y comprobé el resultado del verificador.
-<<<<<<< HEAD
-
-
 
 ## Informe y análisis
 
@@ -317,5 +314,3 @@ Las tablas de la verificación de Lamport se generan con los CSV de eventos de T
 ```bash
 python analysis/tabla_lamport.py --tcp <eventos.csv> --grpc <eventos.csv> --empate <eventos.csv>
 ```
-=======
->>>>>>> 37070ca (Implementación de medición de latencia en gRPC)

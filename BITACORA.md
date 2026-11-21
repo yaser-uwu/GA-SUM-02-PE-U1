@@ -191,7 +191,6 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Uso de inteligencia artificial:**
   - Utilicé el agente OpenCode (modelo DeepSeek V4.1 Flash Free) como apoyo para preparar parte del código y la documentación, el modo de latencia, el coordinador, y como ayuda para revisar el contrato. Revisé el código y ejecuté el piloto y las pruebas de regresión.
 
-<<<<<<< HEAD
 ## 2026-11-20 — Carlos Manotoa
 - **Presentes:** Carlos.
 - **Realizado:** Se verificaron los CSV de Lamport de TCP y gRPC. Cada ejecución revisada tuvo 20 pares válidos y cero errores. El piloto gRPC de 100 bytes tuvo 100 muestras positivas, numeradas del 1 al 100. Corresponde al calentamiento.
@@ -231,7 +230,7 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Problemas encontrados:** El servidor imprimía los eventos durante la recepción. La carga automática de la carpeta completa de datos en GitHub falló.
 - **Solución:** Se añadió un modo de medición sin impresión de eventos y se adjuntaron los CSV en las carpetas de cada corrida, conservando los originales y separando los calentamientos.
 - **Uso de inteligencia artificial:** Se utilizó ChatGPT Sol 6.1 mediante Codex como apoyo para preparar y revisar la implementación, ya las pruebas las hice yo y la documentación la mejoré con la IA. La validación que hice incluyó ejecución real, comprobación de los CSV, verificación de Lamport y pruebas desde un clon limpio.
-=======
+
 ## 2026-11-20 — Bryan Humberto Lombeida Escaleras (preparación de la matriz gRPC)
 - **Presentes:** Bryan Lombeida (sesión individual).
 - **Realizado:**
@@ -242,4 +241,3 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Solución y verificación:** Moví el envío y la medición al nodo emisor y reservé una carpeta nueva para cada intento. En una sesión local de prueba completé las 14 corridas y validé 1 400 muestras de RTT; también comprobé el reparto 34/33/33 en ambos tamaños. Un reintento conservó intacto el intento anterior y, en una prueba de fallo inducido, se guardó la muestra previa y el intento quedó marcado como `fallida`. La prueba de regresión de Lamport mantuvo los 20 pares válidos.
 - **Pendiente de coordinación:** Kevin debe ejecutar la matriz y tomar las capturas en la misma máquina donde midió TCP, con la sesión `20261120-175011-kevin`. Los resultados oficiales quedarán en `data/20261120-175011-kevin/grpc/latencia/`. Las pruebas locales no sustituyen esas mediciones.
 - **Uso de inteligencia artificial:** Usé OpenCode (modelo DeepSeek V4.1 Flash Free) como apoyo en la implementación, y la documentación de los pasos para Kevin.
->>>>>>> 37070ca (Implementación de medición de latencia en gRPC)
