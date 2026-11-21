@@ -78,6 +78,7 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Realizado:** Se incorporaron al contrato la secuencia de 20 intercambios, las carpetas por ejecución e intento y los encabezados de eventos, latencia y duración.
 - **Problemas encontrados:** Al reiniciar los relojes se pueden repetir los identificadores. Una corrida reintentada también puede dejar varios CSV para la misma medición.
 - **Solución:** Cada ejecución e intento conserva sus propios archivos. El coordinador reúne las muestras concurrentes y Eduardo usa un solo intento completo por corrida.
+- **Uso de inteligencia artificial:** Usé ChatGPT (Codex) para aclarar el protocolo experimental y preparar la redacción del contrato a partir de los acuerdos del equipo.
 
 
 ## 2026-11-18 — Eduardo David Reinoso Vélez
@@ -114,6 +115,7 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Solución:** Los comandos quedaron en el README. La ficha y el manifiesto oficiales se generarán con el equipo y los datos de la medición.
 - **Pendiente de coordinación:** Confirmar la máquina para registrar su ficha y fijar las versiones exactas de las cinco dependencias. Cuando esté el cambio de Yaser, actualizar las instrucciones TCP. Cuando ambos mecanismos exporten los CSV, probar una ejecución Lamport de 20 pares y una corrida de latencia por mecanismo con Eduardo. Después, ejecutar las corridas oficiales, comprobar el empate de relojes, generar y verificar `data/SHA256SUMS` y tomar la captura del nodo C.
 - **Verificación de integridad:** Se añadió `--verificar` al script SHA-256 para poder comprobar las huellas con Python. Las pruebas locales confirmaron que detecta cambios, archivos faltantes y CSV nuevos sin huella. Los archivos de prueba se usaron en una carpeta temporal.
+- **Uso de inteligencia artificial:** Usé Codex para preparar y probar los scripts de registro de la máquina y de generación y verificación de huellas SHA-256.
 
 
 ## 2026-11-19 — Eduardo David Reinoso Vélez
@@ -199,6 +201,7 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Problemas encontrados:** Los 20 intercambios acordados se ejecutan en secuencia. Para demostrar el empate hacía falta una ejecución en la que los emisores fueran independientes. En esta copia aún faltan la medición de latencia TCP y la prueba concurrente de latencia.
 - **Solución:** Se usó `analysis/comprobar_empate_tcp.py --sesion <sesion>` con dos envíos independientes al nodo C. La prueba de empate quedó separada de las mediciones de latencia.
 - **Pendiente de coordinación:** Confirmar la máquina y la sesión comunes, completar el piloto TCP y los dos modos concurrentes, y generar las huellas cuando estén todos los CSV oficiales.
+- **Uso de inteligencia artificial:** Usé Codex para revisar los CSV de Lamport y para preparar y ejecutar el script de la prueba de empate con los nodos TCP.
 
 
 ## 2026-11-20 — Eduardo David Reinoso Vélez
@@ -262,6 +265,7 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Realizado:** Se comprobó la sesión `20261120-175011-kevin`. TCP y gRPC tienen 14 corridas completas cada uno, con 100 muestras numeradas del 1 al 100 por corrida. Las 2800 muestras incluyen cuatro calentamientos que quedan fuera del análisis.
 - **Problemas encontrados:** La comparación estaba pendiente hasta recibir los datos de gRPC obtenidos en el mismo equipo que TCP.
 - **Solución:** Kevin publicó los CSV de ambos mecanismos bajo la misma sesión y registró la ficha en [`data/maquina_kevin.json`](data/maquina_kevin.json) y las cinco versiones exactas en [`requirements.txt`](requirements.txt). Se verificaron las 68 huellas de [`data/SHA256SUMS`](data/SHA256SUMS) con el script Python y con `sha256sum -c`, con cero diferencias.
+- **Uso de inteligencia artificial:** Se usó ChatGPT mediante Codex (GPT-6 en la revisión final) como apoyo para aclarar el protocolo experimental, buscar y filtrar información, transformar rápidamente contenido entre formatos (de txt a tex o md) y apoyar en la resolución de los problemas encontrados. También se empleó para preparar la redacción del contrato y para desarrollar, revisar y probar el verificador de Lamport y los scripts de evidencia. No obstante, la redacción, la revisión final y la documentación fueron realizadas y revisadas por el estudiante. Los resultados se comprobaron ejecutando el verificador sobre los CSV reales de TCP y gRPC, reproduciendo el empate con tres nodos TCP y verificando las huellas SHA-256 de los archivos publicados.
 
 ## 2026-11-21 — Eduardo David Reinoso Vélez
 - **Presentes:** Eduardo Reinoso.
