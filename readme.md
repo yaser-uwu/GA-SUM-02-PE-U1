@@ -25,7 +25,7 @@ Integrantes:
 
 Repositorio: https://github.com/yaser-uwu/GA-SUM-02-PE-U1
 
-Video de respaldo: TODO (enlace)
+Video de respaldo: https://youtu.be/oLIgLFT7YBw
 
 ## Estructura
 ```
