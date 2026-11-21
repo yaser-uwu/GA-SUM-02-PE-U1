@@ -8,6 +8,7 @@ import argparse
 import csv
 import sys
 import threading
+import time
 from concurrent import futures
 from datetime import datetime
 from pathlib import Path
@@ -20,7 +21,7 @@ if str(RAIZ) not in sys.path:
 
 import mensajes_pb2
 import mensajes_pb2_grpc
-from src.common.config import HOST, NODOS
+from src.common.config import HOST, NODOS, N_ENVIOS_LATENCIA, TAMANOS_MENSAJE
 
 ENCABEZADO = ["nodo", "tipo_evento", "reloj", "hora_real", "contraparte", "msg_id"]
 TIMEOUT_S = 10
@@ -66,6 +67,7 @@ class Nodo:
 
     def __init__(self, nombre, sesion, registrar_eventos=True):
         self.nombre = nombre
+        self.sesion = sesion
         self.puerto = NODOS[nombre]
         self.reloj = 0
         self.registrar_eventos = registrar_eventos
@@ -134,8 +136,8 @@ class ServicioMensajeria(mensajes_pb2_grpc.MensajeriaServicer):
             contexto.set_details("Mensaje invalido")
             return mensajes_pb2.Acuse(ok=False, error="Mensaje invalido")
 
-        if self.nodo.registrar_eventos:
-            reloj = self.nodo.actualizar_reloj(solicitud.timestamp)
+        reloj = self.nodo.actualizar_reloj(solicitud.timestamp)
+        if self.nodo.registro is not None:
             msg_id = f"{solicitud.sender}:{solicitud.timestamp}"
             self.nodo.registro.escribir(
                 self.nodo.nombre, "recepcion", reloj, solicitud.sender, msg_id
@@ -151,6 +153,77 @@ class ServicioMensajeria(mensajes_pb2_grpc.MensajeriaServicer):
 class ServicioControl(mensajes_pb2_grpc.ControlServicer):
     def __init__(self, nodo):
         self.nodo = nodo
+        self.canales = {}
+        self.stubs = {}
+
+    def cerrar(self):
+        for canal in self.canales.values():
+            canal.close()
+
+    def PrepararLatencia(self, solicitud, contexto):
+        if (
+            self.nodo.registrar_eventos
+            or solicitud.sesion != self.nodo.sesion
+            or solicitud.nodo != self.nodo.nombre
+        ):
+            return mensajes_pb2.Acuse(error="Nodo, sesión o modo --sin-eventos incorrecto")
+
+        for destino, puerto in NODOS.items():
+            if destino == self.nodo.nombre:
+                continue
+            if destino not in self.canales:
+                self.canales[destino] = grpc.insecure_channel(f"{HOST}:{puerto}")
+            canal = self.canales[destino]
+            try:
+                grpc.channel_ready_future(canal).result(timeout=TIMEOUT_S)
+            except grpc.FutureTimeoutError:
+                return mensajes_pb2.Acuse(error=f"{destino} no está listo")
+            self.stubs[destino] = mensajes_pb2_grpc.MensajeriaStub(canal)
+
+        self.nodo.reiniciar()
+        return mensajes_pb2.Acuse(ok=True)
+
+    def MedirEnvios(self, orden, contexto):
+        if (
+            orden.destino not in self.stubs
+            or orden.tamano_bytes not in TAMANOS_MENSAJE.values()
+            or not orden.primer_envio
+            or not orden.cantidad
+            or orden.primer_envio + orden.cantidad - 1 > N_ENVIOS_LATENCIA
+        ):
+            contexto.abort(grpc.StatusCode.INVALID_ARGUMENT, "Orden de latencia inválida")
+
+        invocar = self.stubs[orden.destino].EnviarMensaje
+        payload = "x" * orden.tamano_bytes
+        if orden.inicio_comun_ns:
+            espera = (orden.inicio_comun_ns - time.perf_counter_ns()) / 1e9
+            if not 0 < espera <= TIMEOUT_S:
+                contexto.abort(grpc.StatusCode.FAILED_PRECONDITION, "Inicio común fuera de plazo")
+            time.sleep(espera)
+
+        for numero in range(orden.primer_envio, orden.primer_envio + orden.cantidad):
+            if not contexto.is_active():
+                return
+            mensaje = mensajes_pb2.Mensaje(
+                sender=self.nodo.nombre,
+                timestamp=self.nodo.siguiente_reloj(),
+                message=payload,
+            )
+            error = ""
+            inicio = time.perf_counter_ns()
+            try:
+                acuse = invocar(mensaje, timeout=TIMEOUT_S)
+                fin = time.perf_counter_ns()
+                if not acuse.ok:
+                    error = acuse.error or "Acuse negativo"
+            except grpc.RpcError as exc:
+                fin = time.perf_counter_ns()
+                error = f"{exc.code().name}: {exc.details()}"
+            yield mensajes_pb2.MuestraLatencia(
+                envio_n=numero, inicio_ns=inicio, fin_ns=fin, error=error
+            )
+            if error:
+                return
 
     def Reiniciar(self, solicitud, contexto):
         self.nodo.reiniciar()
@@ -192,11 +265,14 @@ def main():
         args.sesion,
         registrar_eventos=not args.sin_eventos,
     )
-    servidor = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    servidor = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=10), options=(("grpc.so_reuseport", 0),)
+    )
     mensajes_pb2_grpc.add_MensajeriaServicer_to_server(
         ServicioMensajeria(nodo), servidor
     )
-    mensajes_pb2_grpc.add_ControlServicer_to_server(ServicioControl(nodo), servidor)
+    control = ServicioControl(nodo)
+    mensajes_pb2_grpc.add_ControlServicer_to_server(control, servidor)
 
     puerto = servidor.add_insecure_port(f"{HOST}:{nodo.puerto}")
     if puerto == 0:
@@ -217,6 +293,7 @@ def main():
         servidor.stop(grace=0)
         print(f"\n[{nodo.nombre}] detenido.", flush=True)
     finally:
+        control.cerrar()
         if nodo.registro is not None:
             nodo.registro.cerrar()
 

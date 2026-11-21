@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emensajes.proto\"=\n\x07Mensaje\x12\x0e\n\x06sender\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\x12\x0f\n\x07message\x18\x03 \x01(\t\"\"\n\x05\x41\x63use\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\r\n\x05\x65rror\x18\x02 \x01(\t\"\x07\n\x05Vacio\"\x18\n\x05Orden\x12\x0f\n\x07\x64\x65stino\x18\x01 \x01(\t2/\n\nMensajeria\x12!\n\rEnviarMensaje\x12\x08.Mensaje\x1a\x06.Acuse2F\n\x07\x43ontrol\x12\x1b\n\tReiniciar\x12\x06.Vacio\x1a\x06.Acuse\x12\x1e\n\x0cOrdenarEnvio\x12\x06.Orden\x1a\x06.Acuseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emensajes.proto\"=\n\x07Mensaje\x12\x0e\n\x06sender\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\x12\x0f\n\x07message\x18\x03 \x01(\t\"\"\n\x05\x41\x63use\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\r\n\x05\x65rror\x18\x02 \x01(\t\"\x07\n\x05Vacio\"\x18\n\x05Orden\x12\x0f\n\x07\x64\x65stino\x18\x01 \x01(\t\"3\n\x13PreparacionLatencia\x12\x0e\n\x06sesion\x18\x01 \x01(\t\x12\x0c\n\x04nodo\x18\x02 \x01(\t\"w\n\rOrdenLatencia\x12\x0f\n\x07\x64\x65stino\x18\x01 \x01(\t\x12\x14\n\x0ctamano_bytes\x18\x02 \x01(\r\x12\x14\n\x0cprimer_envio\x18\x03 \x01(\r\x12\x10\n\x08\x63\x61ntidad\x18\x04 \x01(\r\x12\x17\n\x0finicio_comun_ns\x18\x05 \x01(\x03\"T\n\x0fMuestraLatencia\x12\x0f\n\x07\x65nvio_n\x18\x01 \x01(\r\x12\x11\n\tinicio_ns\x18\x02 \x01(\x03\x12\x0e\n\x06\x66in_ns\x18\x03 \x01(\x03\x12\r\n\x05\x65rror\x18\x04 \x01(\t2/\n\nMensajeria\x12!\n\rEnviarMensaje\x12\x08.Mensaje\x1a\x06.Acuse2\xab\x01\n\x07\x43ontrol\x12\x1b\n\tReiniciar\x12\x06.Vacio\x1a\x06.Acuse\x12\x1e\n\x0cOrdenarEnvio\x12\x06.Orden\x1a\x06.Acuse\x12\x30\n\x10PrepararLatencia\x12\x14.PreparacionLatencia\x1a\x06.Acuse\x12\x31\n\x0bMedirEnvios\x12\x0e.OrdenLatencia\x1a\x10.MuestraLatencia0\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -39,8 +39,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_VACIO']._serialized_end=124
   _globals['_ORDEN']._serialized_start=126
   _globals['_ORDEN']._serialized_end=150
-  _globals['_MENSAJERIA']._serialized_start=152
-  _globals['_MENSAJERIA']._serialized_end=199
-  _globals['_CONTROL']._serialized_start=201
-  _globals['_CONTROL']._serialized_end=271
+  _globals['_PREPARACIONLATENCIA']._serialized_start=152
+  _globals['_PREPARACIONLATENCIA']._serialized_end=203
+  _globals['_ORDENLATENCIA']._serialized_start=205
+  _globals['_ORDENLATENCIA']._serialized_end=324
+  _globals['_MUESTRALATENCIA']._serialized_start=326
+  _globals['_MUESTRALATENCIA']._serialized_end=410
+  _globals['_MENSAJERIA']._serialized_start=412
+  _globals['_MENSAJERIA']._serialized_end=459
+  _globals['_CONTROL']._serialized_start=462
+  _globals['_CONTROL']._serialized_end=633
 # @@protoc_insertion_point(module_scope)

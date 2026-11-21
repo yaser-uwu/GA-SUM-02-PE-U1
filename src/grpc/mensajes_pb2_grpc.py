@@ -118,6 +118,16 @@ class ControlStub:
                 request_serializer=mensajes__pb2.Orden.SerializeToString,
                 response_deserializer=mensajes__pb2.Acuse.FromString,
                 _registered_method=True)
+        self.PrepararLatencia = channel.unary_unary(
+                '/Control/PrepararLatencia',
+                request_serializer=mensajes__pb2.PreparacionLatencia.SerializeToString,
+                response_deserializer=mensajes__pb2.Acuse.FromString,
+                _registered_method=True)
+        self.MedirEnvios = channel.unary_stream(
+                '/Control/MedirEnvios',
+                request_serializer=mensajes__pb2.OrdenLatencia.SerializeToString,
+                response_deserializer=mensajes__pb2.MuestraLatencia.FromString,
+                _registered_method=True)
 
 
 class ControlServicer:
@@ -137,6 +147,18 @@ class ControlServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PrepararLatencia(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def MedirEnvios(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ControlServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -149,6 +171,16 @@ def add_ControlServicer_to_server(servicer, server):
                     servicer.OrdenarEnvio,
                     request_deserializer=mensajes__pb2.Orden.FromString,
                     response_serializer=mensajes__pb2.Acuse.SerializeToString,
+            ),
+            'PrepararLatencia': grpc.unary_unary_rpc_method_handler(
+                    servicer.PrepararLatencia,
+                    request_deserializer=mensajes__pb2.PreparacionLatencia.FromString,
+                    response_serializer=mensajes__pb2.Acuse.SerializeToString,
+            ),
+            'MedirEnvios': grpc.unary_stream_rpc_method_handler(
+                    servicer.MedirEnvios,
+                    request_deserializer=mensajes__pb2.OrdenLatencia.FromString,
+                    response_serializer=mensajes__pb2.MuestraLatencia.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -207,6 +239,60 @@ class Control:
             '/Control/OrdenarEnvio',
             mensajes__pb2.Orden.SerializeToString,
             mensajes__pb2.Acuse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PrepararLatencia(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Control/PrepararLatencia',
+            mensajes__pb2.PreparacionLatencia.SerializeToString,
+            mensajes__pb2.Acuse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def MedirEnvios(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/Control/MedirEnvios',
+            mensajes__pb2.OrdenLatencia.SerializeToString,
+            mensajes__pb2.MuestraLatencia.FromString,
             options,
             channel_credentials,
             insecure,

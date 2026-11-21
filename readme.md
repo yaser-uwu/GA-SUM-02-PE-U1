@@ -142,46 +142,93 @@ misma secuencia de 20 intercambios.
 
 ## Medición de latencia gRPC
 
-El piloto mide 100 envíos secuenciales, repitiendo cinco veces las 20 rutas del
-contrato, y escribe `latencia.csv` y `duracion.csv`. Los nodos se inician con
-`--sin-eventos` para que el registro de Lamport no intervenga en la medición.
+### Preparación
 
-### Modo automático
+Desde la raíz del repositorio y con el entorno virtual activo, instala las
+versiones probadas con Python 3.12:
 
 ```bash
-python src/grpc/coordinador_latencia.py --sesion 20261120-002144-bryan --tamano corto --corrida 0
+python -m pip install grpcio==1.85.3 protobuf==7.36.2
+python -m pip check
 ```
 
-`corrida 0` es el calentamiento. Para las corridas válidas usa `--corrida 1`
-hasta `--corrida 5`. El resultado queda en:
+`grpcio-tools==1.85.3` solo se necesita para regenerar los módulos del `.proto`;
+los módulos generados ya están en el repositorio.
+
+### Matriz oficial de Kevin: 14 corridas
+
+Usa la misma máquina y sesión que TCP; comprueba su ficha antes de medir y
+detén los nodos TCP o gRPC anteriores para liberar los puertos `5000` a `5002`.
+El coordinador inicia y detiene los tres procesos automáticamente:
+
+```bash
+python src/grpc/coordinador_latencia.py --sesion 20261120-175011-kevin --matriz
+```
+
+Por tamaño (`corto` = 100 bytes, `largo` = 10 240 bytes ASCII en `message`)
+se hace un calentamiento secuencial (`00`), cinco corridas secuenciales
+(`01` a `05`) y una concurrente (`01`). Cada corrida tiene 100 solicitudes
+en total. La secuencial repite cinco veces las 20 rutas y espera cada acuse.
+En concurrente los clientes comparten una hora de inicio: A→B envía 34,
+B→C envía 33 y C→A envía 33.
+
+El nodo emisor mide el RTT desde justo antes de invocar `EnviarMensaje`
+hasta recibir el acuse. No incluye las órdenes del coordinador ni el arranque.
+La duración total va del primer envío al último acuse en secuencial y de la
+señal de inicio al último acuse de los tres clientes en concurrente.
+Los nodos mantienen sus relojes de Lamport sin escribir eventos en este modo.
+
+Cada intento escribe los dos archivos del contrato:
 
 ```text
-data/<sesion>/grpc/latencia/secuencial/<tamano>/corrida-<NN>/intento-01/latencia.csv
-data/<sesion>/grpc/latencia/secuencial/<tamano>/corrida-<NN>/intento-01/duracion.csv
+data/<sesion>/grpc/latencia/<modo>/<tamano>/corrida-NN/intento-NN/latencia.csv
+data/<sesion>/grpc/latencia/<modo>/<tamano>/corrida-NN/intento-NN/duracion.csv
 ```
 
-### Modo manual
-
-Inicia los tres nodos en terminales separadas, todos con `--sin-eventos`:
+Una corrida completa muestra `100/100 envíos OK` y `estado=completa`. Si
+termina toda la matriz, la última línea es `Corridas completas: 14/14`.
+Si una falla, se guardan las muestras recibidas con `estado=fallida` y la matriz
+se detiene. No vuelvas a lanzar `--matriz` para continuar: repite solo la
+corrida fallida y ejecuta las que falten. Por ejemplo:
 
 ```bash
-python src/grpc/nodo.py nodo-A --sesion 20261120-002144-bryan --sin-eventos
-python src/grpc/nodo.py nodo-B --sesion 20261120-002144-bryan --sin-eventos
-python src/grpc/nodo.py nodo-C --sesion 20261120-002144-bryan --sin-eventos
+python src/grpc/coordinador_latencia.py --sesion 20261120-175011-kevin --modo secuencial --tamano corto --corrida 3
+python src/grpc/coordinador_latencia.py --sesion 20261120-175011-kevin --modo concurrente --tamano largo --corrida 1
+```
+
+Cada repetición sin `--intento` usa el siguiente número disponible. Si indicas
+`--intento` y la carpeta existe, el programa se detiene sin sobrescribirla.
+No incluyas los calentamientos en las estadísticas.
+
+### Evidencias de la sesión oficial
+
+En la máquina de medición, captura el resumen final que muestra el reparto
+`34/34`, `33/33`, `33/33` y `Corridas completas: 14/14`. Para la captura de los
+CSV, este comando muestra el número de muestras, el encabezado, una muestra y
+la fila de duración del primer intento concurrente de tamaño largo:
+
+```bash
+python -c "from pathlib import Path; p = Path('data/20261120-175011-kevin/grpc/latencia/concurrente/largo/corrida-01/intento-01'); l = (p / 'latencia.csv').read_text().splitlines(); print(p); print('Filas de latencia:', len(l) - 1); print('\n'.join(l[:2])); print((p / 'duracion.csv').read_text())"
+```
+
+Si ese intento falló, cambia `intento-01` por el número del intento completo.
+Conserva los CSV originales, incluidos los calentamientos e intentos fallidos.
+
+### Modo manual para pruebas
+
+Inicia los tres nodos en terminales separadas con `--sin-eventos` y un ID de
+prueba nuevo, distinto de la sesión oficial:
+
+```bash
+python src/grpc/nodo.py nodo-A --sesion 20261120-190000-prueba-grpc --sin-eventos
+python src/grpc/nodo.py nodo-B --sesion 20261120-190000-prueba-grpc --sin-eventos
+python src/grpc/nodo.py nodo-C --sesion 20261120-190000-prueba-grpc --sin-eventos
 ```
 
 En una cuarta terminal ejecuta el coordinador:
 
 ```bash
-python src/grpc/coordinador_latencia.py --manual --sesion 20261120-002144-bryan --tamano corto --corrida 0
-```
-
-La salida debe terminar con:
-
-```text
-100/100 envíos OK
-Resultado: 100/100 envíos OK | ... | estado=completa
-Verificación del piloto: CORRECTA
+python src/grpc/coordinador_latencia.py --manual --sesion 20261120-190000-prueba-grpc --modo secuencial --tamano corto --corrida 0
 ```
 
 ## Ejecución de los tres nodos con sockets TCP y reloj de Lamport
@@ -231,6 +278,7 @@ Las solicitudes y los acuses usan JSON UTF-8 delimitado por un salto de línea. 
 ### Uso de inteligencia artificial
 
 Se utilizó ChatGPT Sol 6.1 mediante Codex como apoyo para preparar el código y mejorar parte de la documentación y revisar el contrato. Yo ejecuté el programa en mi equipo y comprobé el resultado del verificador.
+<<<<<<< HEAD
 
 
 
@@ -269,3 +317,5 @@ Las tablas de la verificación de Lamport se generan con los CSV de eventos de T
 ```bash
 python analysis/tabla_lamport.py --tcp <eventos.csv> --grpc <eventos.csv> --empate <eventos.csv>
 ```
+=======
+>>>>>>> 37070ca (Implementación de medición de latencia en gRPC)

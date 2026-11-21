@@ -9,6 +9,8 @@ service Mensajeria {
 service Control {
   rpc Reiniciar(Vacio) returns (Acuse);
   rpc OrdenarEnvio(Orden) returns (Acuse);
+  rpc PrepararLatencia(PreparacionLatencia) returns (Acuse);
+  rpc MedirEnvios(OrdenLatencia) returns (stream MuestraLatencia);
 }
 
 message Mensaje {
@@ -26,4 +28,25 @@ message Vacio {}
 
 message Orden {
   string destino = 1;
+}
+
+message PreparacionLatencia {
+  string sesion = 1;
+  string nodo = 2;
+}
+
+message OrdenLatencia {
+  string destino = 1;
+  uint32 tamano_bytes = 2;
+  uint32 primer_envio = 3;
+  uint32 cantidad = 4;
+  // Reloj monotónico compartido por procesos en la misma máquina; 0 = inmediato.
+  int64 inicio_comun_ns = 5;
+}
+
+message MuestraLatencia {
+  uint32 envio_n = 1;
+  int64 inicio_ns = 2;
+  int64 fin_ns = 3;
+  string error = 4;
 }
