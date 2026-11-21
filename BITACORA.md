@@ -262,3 +262,19 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Realizado:** Se comprobó la sesión `20261120-175011-kevin`. TCP y gRPC tienen 14 corridas completas cada uno, con 100 muestras numeradas del 1 al 100 por corrida. Las 2800 muestras incluyen cuatro calentamientos que quedan fuera del análisis.
 - **Problemas encontrados:** La comparación estaba pendiente hasta recibir los datos de gRPC obtenidos en el mismo equipo que TCP.
 - **Solución:** Kevin publicó los CSV de ambos mecanismos bajo la misma sesión y registró la ficha en [`data/maquina_kevin.json`](data/maquina_kevin.json) y las cinco versiones exactas en [`requirements.txt`](requirements.txt). Se verificaron las 68 huellas de [`data/SHA256SUMS`](data/SHA256SUMS) con el script Python y con `sha256sum -c`, con cero diferencias.
+
+## 2026-11-21 — Eduardo David Reinoso Vélez
+- **Presentes:** Eduardo Reinoso.
+- **Realizado:**
+  - Ejecuté `analysis/analisis.py` en mi equipo sobre la sesión oficial `data/20261120-175011-kevin` y generé las tablas y figuras con las corridas oficiales de TCP y gRPC (`docs/tablas/` y `docs/figures/`).
+  - Completé `docs/guia1_practica.tex` con los resultados, la discusión (latencia, rendimiento, hipótesis y escenario del PFC), las conclusiones con cifras, la tabla de aportes y la declaración de uso de IA.
+  - Corregí el comando de análisis del README (el argumento es la carpeta `data/<sesión>`) y agregué la sección de informe y análisis.
+  - Compilé el informe desde un clon limpio del repositorio: 13 páginas, sin errores ni avisos.
+  - Tomé la captura de la ejecución del análisis con usuario, nombre de la máquina, fecha y hora visibles: [captura](screenshots/analisis_script_Eduardo-Reinoso_20261121.png).
+- **Problemas encontrados:**
+  - Al ejecutar el script, pandas mostraba `ChainedAssignmentError` por asignaciones encadenadas.
+  - Mi primera captura no mostraba el nombre de la máquina ni la fecha y estaba partida en dos.
+- **Solución:**
+  - Cambié las asignaciones por `DataFrame.assign` en `analysis/analisis.py`; la ejecución ya no muestra avisos y las tablas salen con los mismos valores.
+  - Repetí la captura con un comando que imprime usuario, equipo y fecha antes de ejecutar el análisis.
+- **Uso de inteligencia artificial:** usé Claude (Sonnet 5.5) para corregir el script de análisis, pulir redacción de las secciones de resultados, discusión y conclusiones, y ordenar los commits. Yo ejecuté el análisis en mi equipo, comprobé que las cifras del informe coinciden con la salida del script y elegí el escenario del PFC.
