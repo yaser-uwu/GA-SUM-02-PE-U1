@@ -1,7 +1,5 @@
-# TODO (quien arme el entorno): fijar las versiones EXACTAS instaladas, p. ej. grpcio==X.Y.Z
-# Se obtienen con: pip freeze  (copiar solo estas cinco líneas con su versión)
-grpcio
-grpcio-tools
-protobuf
-pandas
-matplotlib
+grpcio==1.85.3
+grpcio-tools==1.85.3
+protobuf==7.36.2
+pandas==2.2.3
+matplotlib==3.11.1
