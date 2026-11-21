@@ -88,7 +88,7 @@ def intentos_usados(lat, dur):
     completos = dur[dur["estado"] == "completa"].sort_values("intento")
     usados = completos.drop_duplicates(CLAVE, keep="first")
     lat_usada = lat.merge(usados[CLAVE + ["intento"]], on=CLAVE + ["intento"])
-    lat_usada["calentamiento"] = lat_usada["corrida"] == 0
+    lat_usada = lat_usada.assign(calentamiento=lat_usada["corrida"] == 0)
     usados = usados.assign(calentamiento=usados["corrida"] == 0)
     return lat_usada, usados
 
@@ -117,14 +117,14 @@ def calcular_metricas(lat_usada, usados):
     """
     grupo = ["mecanismo", "modo", "tamano"]
 
-    datos = lat_usada[~lat_usada["calentamiento"]].copy()
-    datos["rtt_ms"] = datos["rtt_s"] * 1000
+    datos = lat_usada[~lat_usada["calentamiento"]]
+    datos = datos.assign(rtt_ms=datos["rtt_s"] * 1000)
     latencia = datos.groupby(grupo)["rtt_ms"].agg(
         muestras="count", media_ms="mean", mediana_ms="median", desv_ms="std",
         p95_ms=lambda s: s.quantile(0.95)).reset_index()
 
-    validas = usados[~usados["calentamiento"]].copy()
-    validas["msg_por_s"] = validas["envios_ok"] / validas["duracion_s"]
+    validas = usados[~usados["calentamiento"]]
+    validas = validas.assign(msg_por_s=validas["envios_ok"] / validas["duracion_s"])
     rendimiento = validas.groupby(grupo)["msg_por_s"].agg(
         corridas="count", msg_s_media="mean", msg_s_desv="std").reset_index()
 
