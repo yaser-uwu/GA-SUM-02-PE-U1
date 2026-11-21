@@ -1,0 +1,15 @@
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lllrrrrr}
+\toprule
+Mecanismo & Modo & Tamaño & $n$ & Media & Mediana & Desv. & P95 \\
+\midrule
+gRPC & concurrente & corto & 100 & 0{,}659 & 0{,}632 & 0{,}136 & 0{,}735 \\
+gRPC & concurrente & largo & 100 & 0{,}700 & 0{,}687 & 0{,}091 & 0{,}782 \\
+gRPC & secuencial & corto & 500 & 0{,}651 & 0{,}618 & 0{,}134 & 0{,}895 \\
+gRPC & secuencial & largo & 500 & 0{,}642 & 0{,}618 & 0{,}110 & 0{,}862 \\
+Sockets TCP & concurrente & corto & 100 & 0{,}423 & 0{,}327 & 0{,}454 & 0{,}680 \\
+Sockets TCP & concurrente & largo & 100 & 0{,}641 & 0{,}430 & 0{,}942 & 1{,}016 \\
+Sockets TCP & secuencial & corto & 500 & 0{,}413 & 0{,}326 & 0{,}263 & 0{,}909 \\
+Sockets TCP & secuencial & largo & 500 & 0{,}503 & 0{,}417 & 0{,}326 & 0{,}892 \\
+\bottomrule
+\end{tabular}

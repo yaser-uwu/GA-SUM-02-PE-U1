@@ -1,0 +1,15 @@
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lllrrr}
+\toprule
+Mecanismo & Modo & Tamaño & Corridas & Media & Desv. \\
+\midrule
+gRPC & concurrente & corto & 1 & 3631{,}240 & --- \\
+gRPC & concurrente & largo & 1 & 3398{,}736 & --- \\
+gRPC & secuencial & corto & 5 & 671{,}725 & 67{,}177 \\
+gRPC & secuencial & largo & 5 & 694{,}851 & 42{,}081 \\
+Sockets TCP & concurrente & corto & 1 & 1008{,}538 & --- \\
+Sockets TCP & concurrente & largo & 1 & 873{,}206 & --- \\
+Sockets TCP & secuencial & corto & 5 & 545{,}736 & 133{,}460 \\
+Sockets TCP & secuencial & largo & 5 & 555{,}025 & 27{,}294 \\
+\bottomrule
+\end{tabular}
