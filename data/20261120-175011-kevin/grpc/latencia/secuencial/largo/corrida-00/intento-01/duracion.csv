@@ -1,0 +1,2 @@
+mecanismo,tamano,tamano_bytes,modo,corrida,duracion_s,envios_ok,estado
+grpc,largo,10240,secuencial,0,0.138144300,100,completa
