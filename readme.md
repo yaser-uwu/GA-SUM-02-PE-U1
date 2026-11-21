@@ -304,7 +304,7 @@ pdflatex guia1_practica.tex
 Las tablas y gráficos del informe salen de los CSV, no se escriben a mano. Desde la raíz del repositorio, con `requirements.txt` instalado:
 
 ```bash
-python analysis/analisis.py <sesion>
+python analysis/analisis.py data/<sesion>
 ```
 
 Lee `data/<sesion>/`, calcula media, mediana, desviación estándar, p95 y mensajes por segundo por mecanismo, modo y tamaño (sin el calentamiento), y escribe las figuras en `docs/figures/` y las tablas en `docs/tablas/`.
