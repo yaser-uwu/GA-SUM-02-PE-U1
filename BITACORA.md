@@ -214,3 +214,19 @@ Pendiente de añadir el enlace del primer avance TCP.
   - Configuré `listings` para que acepte los acentos y comprobé que el informe compila desde un clon limpio.
   - Los resultados quedan pendientes hasta que estén los CSV de latencia.
 - **Uso de inteligencia artificial:** usé Claude (Sonnet 5.5) como herramienta de apoyo. Estructuré las secciones faltantes y diseñé la lógica del script de Lamport, usando la IA para pulir la redacción y generar la base del código. Luego revisé a fondo el texto y validé manualmente los resultados de las tablas contra los CSV.
+
+## 2026-11-20 — Kevin Leonel García Bazurto
+
+- **Presentes:** Kevin Leonel García Bazurto.
+- **Realizado:**
+  - Se incorporó `src/sockets/coordinador_latencia.py` para medir 100 solicitudes por corrida con mensajes de 100 y 10240 bytes, calentamiento, cinco repeticiones y tres clientes concurrentes.
+  - Se añadió `--sin-eventos` al servidor TCP para desactivar la impresión de eventos durante las mediciones.
+  - Se ejecutaron 14 corridas completas en la sesión `20261120-175011-kevin`: 1400 solicitudes con acuse y 28 CSV originales en `data/20261120-175011-kevin/sockets/latencia/`.
+  - Se añadieron cinco pruebas automatizadas para ambos tamaños, mensajes fragmentados, JSON inválido, acuses negativos y CSV secuenciales y concurrentes. Todas pasaron.
+  - Se repitió la verificación de Lamport: 40 eventos, 20 pares válidos y 0 errores.
+  - Se publicó la ficha `data/maquina_kevin.json` y el manifiesto `data/SHA256SUMS`, con las huellas de los 28 CSV nuevos y los 12 CSV que ya estaban en el repositorio.
+  - Se comprobó desde un clon limpio que las cinco pruebas pasan y que las huellas de los 40 CSV son correctas.
+  - Se incorporaron `docs/TCP-LATENCIA.md` y `docs/GUIA-TCP-LATENCIA.md` con la descripción de la medición y sus instrucciones de ejecución.
+- **Problemas encontrados:** El servidor imprimía los eventos durante la recepción. La carga automática de la carpeta completa de datos en GitHub falló.
+- **Solución:** Se añadió un modo de medición sin impresión de eventos y se adjuntaron los CSV en las carpetas de cada corrida, conservando los originales y separando los calentamientos.
+- **Uso de inteligencia artificial:** Se utilizó ChatGPT Sol 6.1 mediante Codex como apoyo para preparar y revisar la implementación, ya las pruebas las hice yo y la documentación la mejoré con la IA. La validación que hice incluyó ejecución real, comprobación de los CSV, verificación de Lamport y pruebas desde un clon limpio.
