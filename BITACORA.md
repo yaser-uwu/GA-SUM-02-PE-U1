@@ -256,3 +256,9 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Problemas encontrados:** Las versiones del entorno instalado no coincidían con las indicadas para ejecutar el código de gRPC.
 - **Solución:** Se creó un entorno separado con las versiones comprobadas, sin cambiar la instalación anterior de Python.
 - **Uso de inteligencia artificial:** Se utilizó ChatGPT Sol 6.1 mediante Codex como ayudante y guía para preparar el entorno, ejecutar las mediciones y comprobar los CSV y el análisis, así agilizaba este trabajo con la ayuda de la IA, También se utilizó como apoyo para redactar esta entrada de forma más clara.
+
+## 2026-11-21 — Carlos Manotoa
+- **Presentes:** Carlos (revisión de la copia local).
+- **Realizado:** Se comprobó la sesión `20261120-175011-kevin`. TCP y gRPC tienen 14 corridas completas cada uno, con 100 muestras numeradas del 1 al 100 por corrida. Las 2800 muestras incluyen cuatro calentamientos que quedan fuera del análisis.
+- **Problemas encontrados:** La comparación estaba pendiente hasta recibir los datos de gRPC obtenidos en el mismo equipo que TCP.
+- **Solución:** Kevin publicó los CSV de ambos mecanismos bajo la misma sesión y registró la ficha en [`data/maquina_kevin.json`](data/maquina_kevin.json) y las cinco versiones exactas en [`requirements.txt`](requirements.txt). Se verificaron las 68 huellas de [`data/SHA256SUMS`](data/SHA256SUMS) con el script Python y con `sha256sum -c`, con cero diferencias.
