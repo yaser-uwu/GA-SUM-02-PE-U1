@@ -1,0 +1,2 @@
+mecanismo,tamano,tamano_bytes,modo,corrida,duracion_s,envios_ok,estado
+sockets,corto,100,concurrente,1,0.099153400,100,completa
