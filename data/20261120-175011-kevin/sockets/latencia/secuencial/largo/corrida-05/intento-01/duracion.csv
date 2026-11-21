@@ -1,0 +1,2 @@
+mecanismo,tamano,tamano_bytes,modo,corrida,duracion_s,envios_ok,estado
+sockets,largo,10240,secuencial,5,0.170960900,100,completa
