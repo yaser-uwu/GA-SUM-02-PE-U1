@@ -241,3 +241,18 @@ Pendiente de añadir el enlace del primer avance TCP.
 - **Solución y verificación:** Moví el envío y la medición al nodo emisor y reservé una carpeta nueva para cada intento. En una sesión local de prueba completé las 14 corridas y validé 1 400 muestras de RTT; también comprobé el reparto 34/33/33 en ambos tamaños. Un reintento conservó intacto el intento anterior y, en una prueba de fallo inducido, se guardó la muestra previa y el intento quedó marcado como `fallida`. La prueba de regresión de Lamport mantuvo los 20 pares válidos.
 - **Pendiente de coordinación:** Kevin debe ejecutar la matriz y tomar las capturas en la misma máquina donde midió TCP, con la sesión `20261120-175011-kevin`. Los resultados oficiales quedarán en `data/20261120-175011-kevin/grpc/latencia/`. Las pruebas locales no sustituyen esas mediciones.
 - **Uso de inteligencia artificial:** Usé OpenCode (modelo DeepSeek V4.1 Flash Free) como apoyo en la implementación, y la documentación de los pasos para Kevin.
+
+
+## 2026-11-21 — Kevin Leonel García Bazurto
+
+- **Presentes:** Kevin Leonel García Bazurto.
+- **Realizado:**
+  - Se preparó el entorno para ejecutar gRPC en la misma computadora utilizada para las mediciones TCP.
+  - Se completaron las 14 corridas de gRPC con mensajes de 100 y 10240 bytes, incluyendo los calentamientos, cinco repeticiones por tamaño y las pruebas concurrentes.
+  - Las corridas terminaron con 1400 envíos exitosos. Se publicaron los 28 CSV en `data/20261120-175011-kevin/grpc/latencia/`.
+  - Se comprobó que cada corrida tuviera 100 muestras, números de envío del 1 al 100, tiempos positivos y estado `completa`.
+  - Se ejecutó el análisis de Eduardo con los datos de TCP y gRPC. Se reconocieron las 28 corridas de ambos mecanismos sin avisos de corridas faltantes.
+  - Se guardaron las versiones del entorno en `requirements.txt` y se actualizó `data/SHA256SUMS` con las huellas de los 68 CSV. Los datos anteriores conservaron su contenido.
+- **Problemas encontrados:** Las versiones del entorno instalado no coincidían con las indicadas para ejecutar el código de gRPC.
+- **Solución:** Se creó un entorno separado con las versiones comprobadas, sin cambiar la instalación anterior de Python.
+- **Uso de inteligencia artificial:** Se utilizó ChatGPT Sol 6.1 mediante Codex como ayudante y guía para preparar el entorno, ejecutar las mediciones y comprobar los CSV y el análisis, así agilizaba este trabajo con la ayuda de la IA, También se utilizó como apoyo para redactar esta entrada de forma más clara.
