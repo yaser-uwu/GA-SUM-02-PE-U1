@@ -7,6 +7,7 @@
 \usepackage{csquotes}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{amsmath}
 \usepackage{listings}
 \usepackage{tikz}
@@ -214,8 +215,9 @@ def actualizar_reloj(self, timestamp_recibido):
         return self.reloj
 \end{lstlisting}
 
-Igual que en TCP, cada envío crea su propio canal hacia el destino, con un plazo máximo de
-10 segundos:
+En la ejecución de Lamport, igual que en TCP, cada envío crea su propio canal hacia el
+destino, con un plazo máximo de 10 segundos. En la medición de latencia, en cambio, el nodo
+crea los canales una sola vez y los reutiliza:
 
 \begin{lstlisting}[language=Python]
 with grpc.insecure_channel(f"{HOST}:{NODOS[destino]}") as canal:
@@ -276,6 +278,45 @@ de los tres clientes en un solo archivo.
   \end{tabular}
 \end{table}
 
+\paragraph{Condiciones de la máquina.} Las corridas oficiales de TCP y de gRPC se hicieron
+en la misma sesión, \texttt{20261120-\allowbreak 175011-\allowbreak kevin}, y en un solo equipo cuya ficha está en
+\texttt{data/\allowbreak maquina\_\allowbreak kevin.json} (tabla~\ref{tab:maquina}). Las versiones de las cinco
+dependencias están fijas en \texttt{requirements.txt}: \texttt{grpcio} 1.85.3,
+\texttt{grpcio-tools} 1.85.3, \texttt{protobuf} 7.36.2, \texttt{pandas} 2.2.3 y
+\texttt{matplotlib} 3.11.1.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Ficha de la máquina de las corridas oficiales.}
+  \label{tab:maquina}
+  \begin{tabular}{ll}
+    \toprule
+    Dato & Valor \\
+    \midrule
+    Sistema operativo & Windows 11 (10.0.26200) \\
+    Procesador & Intel Core i5-1135G7, 2,40 GHz \\
+    Memoria RAM & 16\,934\,494\,208 bytes (15,8 GiB) \\
+    Python & 3.13.5 \\
+    Ejecución de los nodos & procesos (sin contenedores) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Cómo se cronometra en cada mecanismo.} Las dos mediciones no son idénticas, y la
+diferencia importa al leer los resultados:
+\begin{itemize}
+  \item \textbf{Sockets TCP.} El coordinador (\texttt{src/sockets/coordinador\_latencia.py})
+        hace de cliente de los tres orígenes. Abre una conexión TCP al puerto del destino y
+        cronometra desde que la conexión está establecida hasta decodificar el acuse. Abre
+        una conexión nueva por solicitud, y la duración de la corrida incluye abrirlas y
+        cerrarlas. En concurrencia, los tres clientes son hilos del mismo proceso.
+  \item \textbf{gRPC.} El coordinador solo ordena los envíos. La llamada
+        \texttt{EnviarMensaje} la hace el nodo origen hacia otro nodo, por un canal ya
+        abierto, y el nodo cronometra esa llamada. En secuencial, el coordinador ordena los
+        envíos de uno en uno, así que la duración de la corrida incluye el tiempo de esas
+        órdenes entre un envío y el siguiente.
+\end{itemize}
+
 \paragraph{Métricas.} La latencia de cada envío es el tiempo de ida y vuelta, medido con
 \texttt{time.\allowbreak perf\_\allowbreak counter()} desde justo antes del envío hasta recibir el acuse. Para cada
 combinación de mecanismo, modo y tamaño se calculan la media, la mediana, la desviación
@@ -287,7 +328,120 @@ completo de menor número y se excluyen los intentos fallidos y el calentamiento
 barras de los gráficos muestran la media y un intervalo de $\pm 1$ desviación estándar.
 Las figuras y las tablas salen de \texttt{analysis/analisis.py}.
 
+\section{Resultados}
+
+Las tablas y las figuras salen de \texttt{analysis/\allowbreak analisis.py}, ejecutado sobre la sesión
+\texttt{20261120-\allowbreak 175011-\allowbreak kevin}. En secuencial se usan las corridas 1 a 5 de cada combinación
+(500 muestras) y en concurrente la corrida 1 (100 muestras). El calentamiento (corrida 0) se
+excluye.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Latencia de ida y vuelta, en milisegundos.}
+  \label{tab:latencia}
+  \input{tablas/latencia.tex}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Rendimiento en mensajes por segundo: media y desviación estándar entre corridas.
+           En concurrente hay una sola corrida, así que no hay desviación.}
+  \label{tab:rendimiento}
+  \input{tablas/rendimiento.tex}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/latencia_cajas.png}
+  \caption{Latencia en las corridas secuenciales. La caja va del primer al tercer cuartil, la
+           línea es la mediana, los bigotes llegan a 1,5 veces el rango intercuartílico y los
+           círculos son valores fuera de ese rango.}
+  \label{fig:cajas}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/latencia_barras.png}
+  \caption{Latencia media en secuencial. Las barras de error son $\pm 1$ desviación estándar
+           de las 500 muestras.}
+  \label{fig:barras}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/rendimiento_barras.png}
+  \caption{Rendimiento medio en secuencial. Las barras de error son $\pm 1$ desviación
+           estándar entre las cinco corridas.}
+  \label{fig:rendimiento}
+\end{figure}
+
 \section{Discusión}
+
+\subsection{Latencia y rendimiento}
+
+\paragraph{Latencia secuencial.} Con mensajes de 100 B, sockets TCP tuvo una latencia media de
+0,413 ms contra 0,651 ms de gRPC, un 36,6\,\% menos; con 10\,240 B fue de 0,503 ms contra
+0,642 ms, un 21,6\,\% menos. En la mediana la diferencia es mayor: 47,3\,\% (0,326 contra
+0,618 ms) y 32,5\,\% (0,417 contra 0,618 ms). En cada una de las cinco corridas, y con los
+dos tamaños, la media y la mediana de TCP quedaron por debajo de las de gRPC.
+
+\paragraph{Colas y dispersión.} El percentil 95 casi no cambia entre mecanismos: 0,909 ms
+contra 0,895 ms con 100 B, y 0,892 ms contra 0,862 ms con 10\,240 B. La diferencia está en los
+valores extremos. TCP llegó a 4,307 ms y 5,253 ms, y gRPC a 1,398 ms y 1,395 ms. Además, de las
+500 muestras, TCP tuvo 15 y 20 por encima de 1 ms, y gRPC 10 y 4. La desviación estándar de TCP
+(0,263 y 0,326 ms) es casi el doble de la de gRPC con 100 B (0,134 ms) y casi el triple
+con 10\,240 B (0,110 ms). TCP es más rápido en el
+caso típico, pero menos regular.
+
+\paragraph{Efecto del tamaño.} Al pasar de 100 B a 10\,240 B, la latencia media de TCP subió
+un 21,8\,\% (de 0,413 a 0,503 ms) y la de gRPC bajó un 1,4\,\% (de 0,651 a 0,642 ms). Estas
+mediciones no permiten decir por qué.
+
+\paragraph{Concurrencia.} Con los tres clientes a la vez y una sola corrida por combinación, la
+latencia media fue de 0,423 y 0,641 ms en TCP, y de 0,659 y 0,700 ms en gRPC (100 B y
+10\,240 B). El rendimiento fue de 1\,008,5 y 873,2 mensajes por segundo en TCP, y de 3\,631,2 y
+3\,398,7 en gRPC, entre 3,6 y 3,9 veces el de TCP. Con una sola corrida no hay forma de saber
+cuánto varía esa cifra.
+
+\paragraph{Rendimiento secuencial.} gRPC procesó un 23,1\,\% y un 25,2\,\% más mensajes por
+segundo que TCP (671,7 contra 545,7 con 100 B, y 694,9 contra 555,0 con 10\,240 B), aunque su
+latencia es mayor. El rendimiento es envíos entre duración, y la duración incluye tiempo que
+no está en la latencia (sección~\ref{sec:mide}). En las corridas de 100 B, la suma de las 100
+latencias es de unos 41 ms en TCP y de unos 65 ms en gRPC, mientras que las corridas duran de
+0,147 a 0,275 s en TCP y de 0,134 a 0,167 s en gRPC. La mayor parte de cada corrida no es
+latencia, y ese resto es distinto en los dos mecanismos. Por eso estas cifras no se atribuyen a
+la eficiencia del mecanismo.
+
+\subsection{Hipótesis}
+
+La hipótesis del 18 de noviembre, que sockets TCP tendría menor latencia que gRPC, se cumplió
+en la latencia: la media fue menor en las 10 corridas comparadas (cinco por tamaño). No se
+cumplió como afirmación general de rendimiento, porque con las mediciones disponibles no se
+puede separar el efecto del mecanismo del efecto de cómo se mide cada uno. Una explicación
+probable de la diferencia de latencia es que gRPC agrega HTTP/2 y la codificación de
+Protocol Buffers sobre TCP, pero estas mediciones no lo comprueban.
+
+\subsection{Escenario del PFC}
+
+Los integrantes tienen proyectos finales distintos, así que se usa el de Eduardo, el SSDC
+(Sistema de Selección Docente y Convocatorias). Nació como un monolito en capas con Angular,
+Spring Boot y PostgreSQL y se rediseña como sistema distribuido; sus servicios y decisiones
+están en el repositorio del proyecto
+(\url{https://github.com/Johnst2000/ta-pfc-e1-ssdc-distribuido}).
+\begin{itemize}
+  \item \textbf{gRPC entre servicios internos.} Para llamadas entre servicios del SSDC, el
+        contrato tipado en un \texttt{.proto}, el código generado y los estados de error
+        pesan más que la diferencia medida de 0,238 ms en la media con mensajes de 100 B,
+        salvo que algún servicio haga un número muy alto de llamadas por segundo.
+  \item \textbf{HTTP con JSON hacia el navegador.} La interfaz Angular no puede llamar a gRPC
+        directamente, porque los navegadores necesitan una capa adicional (gRPC-Web). Para
+        esa frontera conviene una API HTTP.
+  \item \textbf{Sockets TCP.} Solo si un servicio necesita un protocolo propio o la menor
+        latencia posible entre dos procesos, y el equipo acepta delimitar mensajes, validar
+        campos y manejar errores a mano, como en \texttt{server.py}. En las operaciones
+        conocidas del SSDC (convocatorias, postulaciones y selección) no se identifica un
+        requisito así.
+\end{itemize}
 
 \subsection{Desarrollo, tipado y manejo de errores}
 
@@ -309,23 +463,32 @@ servidor marca el estado de la llamada (por ejemplo, \texttt{INVALID\_ARGUMENT})
 cliente recibe una excepción con ese código y su detalle, además del \texttt{Acuse}
 con \texttt{ok} y \texttt{error}, que este proyecto define en el \texttt{.proto}.
 
-\subsection{Amenazas a la validez}
+\subsection{Amenazas a la validez}\label{sec:mide}
 
 \begin{itemize}
   \item \textbf{Una sola máquina y sin red.} Los tres nodos son procesos en
-        \texttt{localhost}. El tráfico pasa por el loopback, así que las latencias no
-        representan un despliegue en varias máquinas.
-  \item \textbf{Equipos distintos.} El equipo no trabaja en un solo sistema operativo:
-        Carlos probó en Linux y los comandos de Kevin están escritos para PowerShell. Si las
-        corridas oficiales de TCP y de gRPC no se hacen en la misma máquina, la comparación
-        mezcla el mecanismo con el equipo.
-  \item \textbf{Costo del registro.} En el modo de Lamport, cada evento se escribe en un CSV
-        y se vacía el búfer al instante. Para medir latencia, el nodo gRPC se inicia con
-        \texttt{--sin-eventos}, de modo que esa escritura no entre en el tiempo medido.
-  \item \textbf{Conexión por envío.} Los nodos de Lamport abren una conexión nueva en cada
-        envío, en los dos mecanismos. Si la medición de latencia hace lo mismo, el tiempo
-        incluye ese costo, y un sistema con conexiones persistentes podría dar otra
-        diferencia.
+        \texttt{localhost}, y el tráfico pasa por el loopback. Las latencias no representan
+        un despliegue en varias máquinas, y los resultados valen para el equipo y las
+        versiones de la tabla~\ref{tab:maquina}.
+  \item \textbf{Los dos mecanismos no se miden igual.} En TCP el coordinador hace de cliente
+        y abre una conexión por solicitud; en gRPC los nodos se llaman entre sí por canales
+        abiertos. La latencia mide en ambos el intercambio sobre una conexión ya
+        establecida, pero el costo de abrir las conexiones TCP queda en la duración y no en
+        la latencia.
+  \item \textbf{Duración distinta.} La duración que se usa para el rendimiento incluye, en
+        TCP, abrir y cerrar conexiones y, en gRPC secuencial, las órdenes del coordinador.
+        Por eso los mensajes por segundo no son comparables entre mecanismos.
+  \item \textbf{Concurrencia.} Hay una sola corrida por combinación, sin desviación estándar.
+        En TCP, los tres clientes son hilos de un mismo proceso de Python, y no se comprobó
+        si eso limita el resultado.
+  \item \textbf{Valores extremos.} TCP tiene muestras de hasta 5,253 ms que alejan la media de
+        la mediana. Por eso se informan la mediana y el percentil 95 junto con la media.
+  \item \textbf{Registro de eventos.} Ambos mecanismos se miden con el registro de eventos
+        desactivado (\texttt{--sin-eventos}), para que escribir el CSV de Lamport no entre en
+        el tiempo.
+  \item \textbf{Otros programas.} No se registró qué otros programas estaban abiertos durante
+        las corridas, así que no se puede descartar ruido del sistema, solo observarlo en la
+        dispersión.
   \item \textbf{Tamaños y contenido.} Solo se prueban dos tamaños, 100 B y 10 KB, con texto
         ASCII.
 \end{itemize}
@@ -369,6 +532,72 @@ implica relación causal.
   \label{tab:empate}
   \input{tablas/empate.tex}
 \end{table}
+
+\section{Conclusiones}
+
+\begin{itemize}
+  \item Con mensajes de 100 B, sockets TCP redujo la latencia media un 36,6\,\% respecto a gRPC
+        (0,413 contra 0,651 ms) y la mediana un 47,3\,\%. Con 10\,240 B, la redujo un
+        21,6\,\% y un 32,5\,\%. TCP fue menor en las cinco corridas de cada tamaño.
+  \item El percentil 95 es casi igual (0,909 contra 0,895 ms con 100 B), y TCP tiene más
+        valores extremos: hasta 5,253 ms contra 1,395 ms de gRPC con 10\,240 B.
+  \item De 100 B a 10\,240 B, la latencia media de TCP subió un 21,8\,\% y la de gRPC bajó un
+        1,4\,\%.
+  \item gRPC obtuvo un 23,1\,\% y un 25,2\,\% más mensajes por segundo en secuencial, y entre
+        3,6 y 3,9 veces los de TCP en concurrente, con una sola corrida. La duración mide
+        cosas distintas en cada mecanismo, así que estas cifras no se atribuyen al mecanismo.
+  \item En las dos ejecuciones de Lamport (20 intercambios cada una) no hubo ninguna violación,
+        y se observó un empate real: nodo-A y nodo-B enviaron con reloj 1.
+  \item gRPC generó su código desde el \texttt{.proto} y tipó \texttt{timestamp} como
+        \texttt{int64}; en TCP el delimitador, la validación de campos y los errores se
+        escribieron a mano.
+\end{itemize}
+
+\section{Tabla de aportes}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Aportes de cada integrante, con enlaces a sus commits.}
+  \label{tab:aportes}
+  \small
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.3cm}>{\raggedright\arraybackslash}p{6.4cm}>{\raggedright\arraybackslash}p{6.1cm}@{}}
+    \toprule
+    Integrante & Aporte & Commits \\
+    \midrule
+    Kevin García & Servidor y cliente TCP con tres nodos y reloj de Lamport; coordinador de
+    latencia TCP, secuencial y concurrente; corridas oficiales de TCP y de gRPC en su equipo y
+    ficha de la máquina. & \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/cf054dbe1514ecb9ed4cca748df664ab768fbe3f}{cf054db}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/f6ba6298c776a2741d3943cf5ebf356f4c8a29d2}{f6ba629}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/4e6b7eda37f82c66454391ac48b8a40500309d5d}{4e6b7ed}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/0e061bfe15139e5cf4c890ad9c566292b2bcb4d8}{0e061bf}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/317bac747d4be88534343a2b0f0b084bbd8b110c}{317bac7} \\
+    Bryan Lombeida & Servicio gRPC y su primera llamada; nodos gRPC con reloj de Lamport;
+    coordinador de latencia gRPC con la medición en el nodo emisor. & \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/6705cbf04cd83086a98db6962b18acc5b0de4a79}{6705cbf}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/78eb10187eb421204af59c7ccbd2b183c1db05e7}{78eb101}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/3a5aeab3c2b2326869ff914780b5dc8cc54dc4cc}{3a5aeab}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/aa753c7861479c3a896e64912febb2d96e0e1885}{aa753c7} \\
+    Carlos Manotoa & Plan de ejecución y contrato de datos; verificador de Lamport; scripts de la
+    ficha de la máquina y de las huellas SHA-256; caso de empate de relojes; verificación final
+    de las corridas. Sus commits usan los nombres de usuario \texttt{Carlos} y
+    \texttt{CarlosManotoa007}. & \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/06f2eb1288e966d8d3255b9eb33ec3caaa2a21e9}{06f2eb1}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/4c57195c21ca2c86f63f1ad8741c454218b01a56}{4c57195}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/bb0b22e2e347f14b04aa1606878a6aa1aab402fa}{bb0b22e}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/c60a4762844dc87c62154c22659e271d2adc741d}{c60a476}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/bdb7088ec9117c49dd37eb42b564f5c28e11e2e9}{bdb7088}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/651bdd6b3190bf61cbf4ef21bd52c0bfa09bfee8}{651bdd6} \\
+    Eduardo Reinoso & Lector y métricas del análisis, figuras y tablas LaTeX; referencias
+    IEEE; informe, con la verificación de Lamport y su script de tablas. & \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/e26d2441f28a39a7db63cd3142639fa8c134c358}{e26d244}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/b7938a8e37a8402fff5f9017fce398d946265215}{b7938a8}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/128534d580f772ed570dc0b08c8b53426ff9b6d7}{128534d}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/8cbc828023990e248c8a09cf2337334daadfa3f3}{8cbc828}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/b37079cf72c66e0f7891cea966fda4ecab44c361}{b37079c}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/24d82f148f15673e0d2c4f3ed4a7e0c9eb8e18cd}{24d82f1}, \href{https://github.com/yaser-uwu/GA-SUM-02-PE-U1/commit/68aac37c2b1ab5276c02e2be01df3454aa112eb5}{68aac37} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Declaración de uso de inteligencia artificial}
+
+Se usaron herramientas de IA generativa. Cada integrante lo registró en su entrada de
+\texttt{BITACORA.md}:
+\begin{itemize}
+  \item \textbf{Eduardo Reinoso:} Claude (Sonnet 5.5) para escribir el código de los scripts
+        de análisis y de las tablas de Lamport, redactar el texto de las secciones del informe
+        y buscar las referencias. Eduardo definió qué calcular y graficar y la hipótesis,
+        comprobó cada DOI en el navegador y revisó el código, el texto y las tablas contra los
+        CSV.
+  \item \textbf{Kevin García:} ChatGPT Sol 6.1, mediante Codex, para preparar y revisar el
+        código de TCP, las pruebas y la documentación. Kevin ejecutó los programas y las
+        mediciones y validó los CSV.
+  \item \textbf{Bryan Lombeida:} OpenCode (DeepSeek V4.1 Flash Free) para preparar el
+        \texttt{.proto}, los nodos, los coordinadores y la documentación. Bryan revisó y
+        ejecutó el código.
+  \item \textbf{Carlos Manotoa:} su declaración está en su entrada de \texttt{BITACORA.md}.
+\end{itemize}
+Los datos y las capturas salen de ejecuciones reales del código del repositorio.
 
 \printbibliography
 
