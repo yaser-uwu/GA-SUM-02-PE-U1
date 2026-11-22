@@ -130,9 +130,12 @@ Se genera por script al momento de la corrida (no se escribe a mano).
   la ficha de la máquina.
 
 ## Ubicación de archivos
-- `proto/messaging.proto` (la guía en PDF lo ubica en src/grpc/, pero la guía de texto exige /proto/; se usa /proto/).
-- Código generado por grpcio-tools (`messaging_pb2*.py`) va en `src/grpc/`.
-- Sockets: `src/sockets/server.py`, `src/sockets/client.py`. gRPC: `src/grpc/server_grpc.py`, `src/grpc/client_grpc.py`.
+- Contrato de gRPC: `proto/mensajes.proto`. Los módulos generados por
+  `grpcio-tools` se guardan como `src/grpc/mensajes_pb2.py` y
+  `src/grpc/mensajes_pb2_grpc.py`.
+- TCP usa `src/sockets/server.py` y `src/sockets/client.py` para Lamport.
+  gRPC usa `src/grpc/nodo.py` y `src/grpc/coordinador_lamport.py`.
+  Cada mecanismo tiene su propio `coordinador_latencia.py`.
 - Verificación de eventos: `analysis/verificar_lamport.py`.
 - Análisis: `analysis/analisis.py`. Figuras: `docs/figures/` (boxplot a 300 DPI).
 - Documento: `docs/guia1_practica.tex`, `docs/referencias.bib`, `docs/guia1_practica.pdf`.
@@ -192,7 +195,10 @@ Son cuatro corridas concurrentes de 100 solicitudes en total cada una.
 - Identificar el mecanismo, la corrida y el escenario.
 - Usar la duración real para calcular el rendimiento.
 
-### Pendientes de coordinación
+### Verificación de la sesión oficial
 
-- Acordar los comandos de ejecución con los implementadores.
-- Comprobar que TCP y gRPC generan los CSV del contrato.
+Los comandos están documentados en el [README](../readme.md) y en la
+[guía de medición TCP](GUIA-TCP-LATENCIA.md). La sesión
+`20261120-175011-kevin` contiene las 14 corridas previstas de cada mecanismo,
+con 100 solicitudes exitosas por corrida. Se comprobaron los CSV de eventos,
+latencia y duración, así como las huellas de los datos publicados.

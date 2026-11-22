@@ -32,7 +32,7 @@ Video de respaldo: https://youtu.be/oLIgLFT7YBw
 /src/sockets/   código con sockets TCP
 /src/grpc/      código gRPC (y el generado por grpcio-tools)
 /src/common/    reloj de Lamport, configuración y escritura de CSV compartidos
-/proto/         messaging.proto
+/proto/         mensajes.proto
 /data/          CSV crudos y SHA256SUMS
 /analysis/      script de análisis y gráficos
 /docs/          .tex, .bib y PDF compilado
@@ -269,6 +269,7 @@ Resultado obtenido: **40 eventos, 20 mensajes identificados, 20 pares válidos y
 ### Documentación y evidencia
 
 - [Guía TCP con Lamport](docs/AVANCE-TCP-LAMPORT.md).
+- [Guía de medición TCP secuencial y concurrente](docs/GUIA-TCP-LATENCIA.md).
 - [CSV de los 20 intercambios](data/20261119-222709-kevin/sockets/eventos/lamport-01/eventos.csv).
 - [Captura de la verificación con usuario, equipo, fecha y hora](screenshots/tcp-lamport-20-intercambios-kevin.jpeg).
 - [Contrato del equipo](docs/CONTRATO.md).
@@ -313,4 +314,15 @@ Las tablas de la verificación de Lamport se generan con los CSV de eventos de T
 
 ```bash
 python analysis/tabla_lamport.py --tcp <eventos.csv> --grpc <eventos.csv> --empate <eventos.csv>
+```
+
+### Comprobar los datos oficiales
+
+La sesión comparativa es `data/20261120-175011-kevin/`. La
+[ficha de la máquina](data/maquina_kevin.json) y el
+[manifiesto SHA-256](data/SHA256SUMS) están en `data/`. Desde la raíz del
+repositorio, verifica las huellas con:
+
+```bash
+python analysis/generar_sha256.py --verificar
 ```
